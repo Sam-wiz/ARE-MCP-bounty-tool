@@ -1,4 +1,4 @@
-# hack-ai-v2 — AI-Powered Bug Bounty Automation
+# ARE based bug bounty tool 
 
 > An MCP server + CLI tool that connects any AI model to **158 security tools**, automating the full bug bounty workflow: recon → scan → finding tracking → report generation.
 
