@@ -1,12 +1,12 @@
 # ARE based bug bounty tool 
 
-> An MCP server + CLI tool that connects any AI model to **158 security tools**, automating the full bug bounty workflow: recon → scan → finding tracking → report generation.
+> An MCP server + CLI tool that connects any AI model to **160 security tools**, automating the full bug bounty workflow: recon → scan → finding tracking → report generation.
 
 ---
 
 ## What Is This?
 
-hack-ai-v2 exposes **28 MCP tools** that any AI assistant (Claude, Copilot, Gemini, Cursor, Cline) can use to run real security tools on your machine. You describe what you want in natural language. The AI calls the right tools in sequence. Everything gets logged to MongoDB.
+hack-ai-v2 exposes **29 MCP tools** that any AI assistant (Claude, Copilot, Gemini, Cursor, Cline) can use to run real security tools on your machine. You describe what you want in natural language. The AI calls the right tools in sequence. Everything gets logged to MongoDB.
 
 **Two binaries:**
 - `bin/hack-ai-v2` — MCP server (stdio JSON-RPC, for Claude Code / Cursor / Cline / Copilot)
@@ -24,7 +24,7 @@ AI Model (Claude / Copilot / Gemini)
 hack-ai-v2 binary  ─────── MongoDB (audit log + findings)
     │                       Redis  (async workers)
     ▼
-Plugin Engine (154 YAML-defined tools)
+Plugin Engine (156 YAML-defined tools)
     │
     ▼
 Real CLI tools: subfinder, nuclei, sqlmap, nmap, frida, ffuf...
@@ -61,7 +61,7 @@ cp config/config.example.yaml config/config.yaml
 ### 2. Install security tools
 
 ```bash
-# Install all 158 tools (takes 10-20 min, requires brew + pip + go)
+# Install all 160 tools (takes 10-20 min, requires brew + pip + go)
 ./scripts/install_tools.sh --all
 
 # Or install by category
@@ -97,7 +97,7 @@ brew services start redis
 
 ## Usage: MCP Server (Recommended)
 
-Connect `bin/hack-ai-v2` to your AI assistant. The AI will have access to all 28 tools automatically.
+Connect `bin/hack-ai-v2` to your AI assistant. The AI will have access to all 29 tools automatically.
 
 ### Claude Code
 
@@ -182,7 +182,7 @@ npx -y supergateway --port 3000 /absolute/path/to/bin/hack-ai-v2
 
 ## Usage: CLI Wrapper (`hack-ai`)
 
-The `hack-ai` binary wraps all 28 engine tools into shell commands — useful for terminal AIs or direct scripting.
+The `hack-ai` binary wraps all 29 engine tools into shell commands — useful for terminal AIs or direct scripting.
 
 ```bash
 # Optional: install globally
@@ -204,7 +204,7 @@ hack-ai recon shopify.com --mode deep
 # 4. Scan discovered subdomains for vulnerabilities
 hack-ai scan --targets sub1.shopify.com,sub2.shopify.com --severity critical,high
 
-# 5. Run a specific tool directly (any of 154 plugins)
+# 5. Run a specific tool directly (any of 156 plugins)
 hack-ai nuclei --target https://api.shopify.com
 hack-ai sqlmap --url "https://api.shopify.com/search?q=test"
 hack-ai nmap --target 23.227.38.0 --flags "-sV -sC"
@@ -233,8 +233,10 @@ hack-ai inject --urls <u1,u2> [--types xss,sqli]
 hack-ai fuzz --target <url> [--type http|api]
 hack-ai cloud --target <t> [--provider aws|gcp|azure]
 hack-ai mobile --apk <path> [--mode static|dynamic|full]
+hack-ai download-app --platform android --package-id com.target.app [--source apkpure|google-play]
+hack-ai download-app --platform ios --package-id com.target.app --email <id> --password <pw>
 
-# Direct plugin execution (any of 154 plugins)
+# Direct plugin execution (any of 156 plugins)
 hack-ai tool --name <plugin>
 hack-ai <plugin_name> --target <t>   # shorthand
 
@@ -287,13 +289,14 @@ Each program gets an isolated workspace:
 
 ---
 
-## 28 MCP Tools Reference
+## 29 MCP Tools Reference
 
 | Category | Tools |
 |---|---|
 | Program/scope | `set_program`, `list_programs`, `program_stats`, `set_target`, `validate_scope` |
 | Recon | `recon_discover` |
 | Scanning | `scan_vulnerabilities`, `test_injection`, `test_cloud`, `test_mobile`, `fuzz_target` |
+| Mobile download | `download_app` |
 | Direct execution | `run_tool`, `http_request`, `api_test` |
 | Findings | `ingest_result`, `validate_finding`, `get_findings`, `generate_report`, `capture_evidence` |
 | OPSEC | `opsec_setup`, `opsec_verify` |
@@ -302,7 +305,7 @@ Each program gets an isolated workspace:
 
 ---
 
-## Tool Arsenal (158 Tools)
+## Tool Arsenal (160 Tools)
 
 ### Recon (58)
 subfinder, amass, findomain, chaos, httpx, httprobe, katana, gospider, hakrawler, meg, gau, waybackurls, dnsx, shuffledns, puredns, massdns, naabu, masscan, nmap, rustscan, arjun, paramspider, kiterunner, linkfinder, getjs, gowitness, eyewitness, shodan, censys, uncover, alterx, dnsgen, gotator, dnstwist, assetfinder, asnmap, tlsx, wafw00f, whatweb, theharvester, reconftw, fierce, dnsrecon, knockpy, unfurl, gf, anew, gron, qsreplace
@@ -322,8 +325,8 @@ trufflehog, gitleaks, secretfinder, gitdorker, githound, gittools
 ### Cloud Security (4)
 prowler, scoutsuite, s3scanner, cloudenum
 
-### Mobile Security (10)
-adb, android_emulator, frida, objection, apktool, jadx, drozer, mobsf, sdkmanager, avdmanager
+### Mobile Security (12)
+adb, android_emulator, frida, objection, apktool, jadx, drozer, mobsf, sdkmanager, avdmanager, apkeep, ipatool
 
 ### OPSEC (4)
 protonvpn-cli, proxychains-ng, spoofmac, macchanger
@@ -393,7 +396,7 @@ make build-cli      # Build only hack-ai CLI
 make test           # Run all tests
 make vet            # Run go vet
 make cover          # Tests with coverage report
-make install-tools  # Install all 158 security tools
+make install-tools  # Install all 160 security tools
 make check-tools    # Health check all tools
 make check-recon    # Health check recon tools only
 make check-web      # Health check web scanning tools
@@ -418,7 +421,7 @@ hack-ai-v2/
 │   ├── types/          Shared types
 │   └── workers/        Async background workers
 ├── plugins/
-│   └── core/           YAML plugin definitions (158 tools)
+│   └── core/           YAML plugin definitions (160 tools)
 │       ├── recon/
 │       ├── scanner/
 │       ├── fuzzer/
