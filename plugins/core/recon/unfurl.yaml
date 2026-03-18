@@ -1,0 +1,34 @@
+# Unfurl - Pull out URLs
+name: unfurl
+category: recon.urls
+version: "0.4.3"
+description: Pull out bits of URLs provided on stdin
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/unfurl@latest
+  verify: which unfurl
+
+execute:
+  command: cat {input_file} | unfurl {mode}
+  input:
+    input_file:
+      type: string
+      required: true
+    mode:
+      type: string
+      default: "keys"
+      description: "keys, values, domains, paths, etc."
+  output:
+    format: lines
+    type: extracted
+  timeout: 300
+
+capabilities:
+  - url_parsing
+  - param_extraction
+
+resources:
+  cpu: low
+  memory: low
+  network: none

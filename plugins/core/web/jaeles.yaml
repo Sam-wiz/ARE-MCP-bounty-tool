@@ -1,0 +1,37 @@
+# Jaeles - Web scanner
+name: jaeles
+category: testing.web
+version: "0.17.0"
+description: The Swiss Army knife for automated Web Application Testing
+
+install:
+  method: go
+  command: go install github.com/jaeles-project/jaeles@latest
+  verify: jaeles version
+
+execute:
+  command: jaeles scan -u {url} -s {signatures} -o {output_dir} --json
+  input:
+    url:
+      type: string
+      required: true
+    signatures:
+      type: string
+      default: "~/.jaeles/signatures"
+    output_dir:
+      type: string
+      default: "/tmp/jaeles"
+  output:
+    format: json
+    type: web_findings
+  timeout: 3600
+
+capabilities:
+  - signature_scanning
+  - custom_signatures
+  - web_testing
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

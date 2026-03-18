@@ -1,0 +1,36 @@
+# Ldapsearch - LDAP query
+name: ldapsearch
+category: network.ldap
+version: "2.6"
+description: LDAP query tool
+
+install:
+  method: apt
+  command: apt-get install -y ldap-utils
+  verify: ldapsearch --version
+
+execute:
+  command: ldapsearch -x -H ldap://{host} -b "{base_dn}" "{filter}"
+  input:
+    host:
+      type: string
+      required: true
+    base_dn:
+      type: string
+      required: true
+    filter:
+      type: string
+      default: "(objectClass=*)"
+  output:
+    format: ldif
+    type: ldap_results
+  timeout: 300
+
+capabilities:
+  - ldap_query
+  - user_enumeration
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

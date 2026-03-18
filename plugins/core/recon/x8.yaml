@@ -1,0 +1,36 @@
+# ParamMiner - Burp extension alternative
+name: x8
+category: recon.params
+version: "4.1.0"
+description: Hidden parameters discovery
+
+install:
+  method: cargo
+  command: cargo install x8
+  verify: x8 --version
+
+execute:
+  command: x8 -u {url} -w {wordlist} -o {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      default: "/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt"
+    output_file:
+      type: string
+      default: "/tmp/x8.txt"
+  output:
+    format: text
+    type: parameters
+  timeout: 1800
+
+capabilities:
+  - hidden_params
+  - parameter_bruteforce
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

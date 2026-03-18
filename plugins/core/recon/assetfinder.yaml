@@ -1,0 +1,30 @@
+# Assetfinder
+name: assetfinder
+category: recon.subdomains
+version: "0.1.0"
+description: Find domains and subdomains related to a given domain
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/assetfinder@latest
+  verify: which assetfinder
+
+execute:
+  command: assetfinder --subs-only {domain}
+  input:
+    domain:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: subdomains
+  timeout: 300
+
+capabilities:
+  - subdomain_enum
+  - passive_recon
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

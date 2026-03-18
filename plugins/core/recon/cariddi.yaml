@@ -1,0 +1,31 @@
+# Cariddi - Crawl and scan
+name: cariddi
+category: recon.crawl
+version: "1.3.0"
+description: Crawl and scan endpoints for keys, secrets, and more
+
+install:
+  method: go
+  command: go install github.com/edoardottt/cariddi/cmd/cariddi@latest
+  verify: cariddi -version
+
+execute:
+  command: echo {url} | cariddi -s -e -json
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: json
+    type: crawl_findings
+  timeout: 1800
+
+capabilities:
+  - crawling
+  - secret_detection
+  - endpoint_discovery
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

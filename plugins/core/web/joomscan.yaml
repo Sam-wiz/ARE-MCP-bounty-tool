@@ -1,0 +1,30 @@
+# Joomscan - Joomla scanner
+name: joomscan
+category: testing.cms
+version: "1.0"
+description: Joomla vulnerability scanner
+
+install:
+  method: git
+  command: git clone https://github.com/OWASP/joomscan.git
+  verify: perl joomscan.pl -h
+
+execute:
+  command: perl joomscan.pl -u {url}
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: text
+    type: joomla_findings
+  timeout: 1200
+
+capabilities:
+  - joomla_scanning
+  - plugin_enumeration
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

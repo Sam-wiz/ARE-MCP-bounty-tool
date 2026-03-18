@@ -1,0 +1,34 @@
+# JWT_Tool - JWT Cracker
+name: jwt_tool
+category: testing.jwt
+version: "2.2.6"
+description: JWT toolkit for testing
+
+install:
+  method: pip
+  command: pip3 install jwt_tool
+  verify: jwt_tool -h
+
+execute:
+  command: jwt_tool {token} -M at -t {target} -rh "Authorization: Bearer {token}"
+  input:
+    token:
+      type: string
+      required: true
+    target:
+      type: string
+      required: true
+  output:
+    format: text
+    type: jwt_findings
+  timeout: 1200
+
+capabilities:
+  - jwt_cracking
+  - jwt_manipulation
+  - signature_bypass
+
+resources:
+  cpu: medium
+  memory: low
+  network: moderate

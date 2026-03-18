@@ -1,0 +1,34 @@
+# Shodan CLI
+name: shodan
+category: recon.osint
+version: "1.30.0"
+description: Shodan command-line interface
+
+install:
+  method: pip
+  command: pip3 install shodan
+  verify: shodan version
+
+execute:
+  command: shodan search {query} --limit {limit}
+  input:
+    query:
+      type: string
+      required: true
+    limit:
+      type: number
+      default: 100
+  output:
+    format: json
+    type: shodan_results
+  timeout: 300
+
+capabilities:
+  - internet_scanning
+  - device_search
+  - banner_grabbing
+
+resources:
+  cpu: low
+  memory: low
+  network: low

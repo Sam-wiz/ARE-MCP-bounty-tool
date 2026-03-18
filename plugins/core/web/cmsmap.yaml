@@ -1,0 +1,34 @@
+# CMSmap - CMS Scanner
+name: cmsmap
+category: testing.cms
+version: "1.0.0"
+description: CMS vulnerability scanner
+
+install:
+  method: git
+  command: git clone https://github.com/Dionach/CMSmap.git
+  verify: python3 cmsmap.py -h
+
+execute:
+  command: python3 cmsmap.py -t {target} -o {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/cmsmap.txt"
+  output:
+    format: text
+    type: cms_findings
+  timeout: 1800
+
+capabilities:
+  - wordpress_scanning
+  - joomla_scanning
+  - drupal_scanning
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

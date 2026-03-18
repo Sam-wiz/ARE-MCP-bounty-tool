@@ -1,0 +1,37 @@
+# John the Ripper
+name: john
+category: testing.cracking
+version: "1.9.0"
+description: Password cracker
+
+install:
+  method: apt
+  command: apt-get install -y john
+  verify: john --version
+
+execute:
+  command: john --wordlist={wordlist} --format={format} {hash_file}
+  input:
+    hash_file:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      required: true
+    format:
+      type: string
+      default: "auto"
+  output:
+    format: text
+    type: cracked_hashes
+  timeout: 86400
+
+capabilities:
+  - hash_cracking
+  - format_detection
+  - rule_based_attacks
+
+resources:
+  cpu: high
+  memory: medium
+  network: none

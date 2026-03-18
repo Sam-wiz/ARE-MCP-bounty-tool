@@ -1,0 +1,39 @@
+# Crunch - Wordlist generator
+name: crunch
+category: utility.wordlist
+version: "3.6"
+description: Wordlist generator
+
+install:
+  method: apt
+  command: apt-get install -y crunch
+  verify: crunch -h
+
+execute:
+  command: crunch {min} {max} {charset} -o {output_file}
+  input:
+    min:
+      type: number
+      required: true
+    max:
+      type: number
+      required: true
+    charset:
+      type: string
+      default: "abcdefghijklmnopqrstuvwxyz0123456789"
+    output_file:
+      type: string
+      default: "/tmp/crunch.txt"
+  output:
+    format: lines
+    type: wordlist
+  timeout: 3600
+
+capabilities:
+  - wordlist_generation
+  - custom_patterns
+
+resources:
+  cpu: medium
+  memory: medium
+  network: none

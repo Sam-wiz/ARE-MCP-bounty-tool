@@ -1,0 +1,35 @@
+# Nmap
+name: nmap
+category: network.scanning
+version: "7.94"
+description: Network exploration and security auditing
+
+install:
+  method: apt
+  command: apt-get install -y nmap
+  verify: nmap --version
+
+execute:
+  command: nmap -sV -sC -oX {output_file} {target}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/nmap.xml"
+  output:
+    format: xml
+    type: port_scan
+  timeout: 7200
+
+capabilities:
+  - port_scanning
+  - service_detection
+  - script_scanning
+  - os_detection
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

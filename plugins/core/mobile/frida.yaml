@@ -1,0 +1,42 @@
+# Frida - Dynamic Instrumentation
+name: frida
+category: mobile.dynamic
+version: "16.0.0"
+description: Dynamic instrumentation toolkit for mobile apps
+
+install:
+  method: pip
+  command: pip3 install frida-tools
+  verify: frida --version
+
+execute:
+  command: frida -U -f {package} -l {script} --no-pause {extra_args}
+  input:
+    package:
+      type: string
+      required: true
+      description: Package name or process
+    script:
+      type: string
+      required: false
+      description: Frida script to inject
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: text
+    type: frida_output
+  timeout: 3600
+
+capabilities:
+  - ssl_pinning_bypass
+  - root_detection_bypass
+  - method_hooking
+  - memory_manipulation
+  - runtime_analysis
+
+resources:
+  cpu: low
+  memory: medium
+  network: none

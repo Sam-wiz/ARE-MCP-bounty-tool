@@ -1,0 +1,53 @@
+# Ghauri - SQLi Detection
+name: ghauri
+category: testing.sqli
+version: "1.2.0"
+description: Advanced SQL injection detection tool
+
+install:
+  method: pip
+  command: pip3 install ghauri
+  verify: ghauri --version
+
+execute:
+  command: ghauri -u "{url}" --batch --level {level} --risk {risk} {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+      description: Target URL with parameters
+    level:
+      type: number
+      required: false
+      default: 1
+    risk:
+      type: number
+      required: false
+      default: 1
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: text
+    type: sqli_findings
+  timeout: 1800
+
+parse:
+  type: regex
+  schema:
+    vulnerable:
+      regex: "is vulnerable"
+    parameter:
+      regex: "Parameter: (.+?)\\s"
+      group: 1
+
+capabilities:
+  - sqli_detection
+  - blind_sqli
+  - time_based_sqli
+
+resources:
+  cpu: medium
+  memory: medium
+  network: moderate

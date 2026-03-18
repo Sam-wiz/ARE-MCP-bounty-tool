@@ -1,0 +1,34 @@
+# Dnsx
+name: dnsx
+category: recon.dns
+version: "1.1.4"
+description: Fast DNS toolkit for running DNS queries
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+  verify: dnsx -version
+
+execute:
+  command: cat {input_file} | dnsx -resp -a -aaaa -cname -mx -ns -txt -json -o {output_file}
+  input:
+    input_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/dnsx.json"
+  output:
+    format: json
+    type: dns_records
+  timeout: 1800
+
+capabilities:
+  - dns_resolution
+  - dns_record_types
+  - wildcard_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: high

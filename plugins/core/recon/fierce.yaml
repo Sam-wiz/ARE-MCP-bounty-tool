@@ -1,0 +1,31 @@
+# Fierce - DNS reconnaissance
+name: fierce
+category: recon.dns
+version: "1.5.0"
+description: DNS reconnaissance tool
+
+install:
+  method: pip
+  command: pip3 install fierce
+  verify: fierce -h
+
+execute:
+  command: fierce --domain {domain}
+  input:
+    domain:
+      type: string
+      required: true
+  output:
+    format: text
+    type: dns_info
+  timeout: 600
+
+capabilities:
+  - dns_bruteforce
+  - zone_transfer
+  - subdomain_enum
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

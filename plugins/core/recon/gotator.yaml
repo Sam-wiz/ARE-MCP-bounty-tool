@@ -1,0 +1,36 @@
+# Gotator - Subdomain permutations
+name: gotator
+category: recon.subdomains
+version: "1.1.0"
+description: Generate subdomains using permutations
+
+install:
+  method: go
+  command: go install github.com/Josue87/gotator@latest
+  verify: which gotator
+
+execute:
+  command: gotator -sub {subdomains_file} -perm {permutations_file} -depth {depth}
+  input:
+    subdomains_file:
+      type: string
+      required: true
+    permutations_file:
+      type: string
+      required: true
+    depth:
+      type: number
+      default: 1
+  output:
+    format: lines
+    type: subdomains
+  timeout: 600
+
+capabilities:
+  - subdomain_permutation
+  - wordlist_generation
+
+resources:
+  cpu: medium
+  memory: high
+  network: none

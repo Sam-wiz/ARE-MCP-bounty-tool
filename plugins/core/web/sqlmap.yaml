@@ -1,0 +1,68 @@
+# SQLMap - SQL Injection Tool
+name: sqlmap
+category: testing.sqli
+version: "1.7"
+description: Automatic SQL injection and database takeover tool
+
+install:
+  method: pip
+  command: pip3 install sqlmap
+  verify: sqlmap --version
+
+execute:
+  command: sqlmap -u "{url}" --batch --level={level} --risk={risk} --random-agent {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+      description: Target URL with parameters
+    level:
+      type: number
+      required: false
+      default: 1
+      description: Level of tests (1-5)
+    risk:
+      type: number
+      required: false
+      default: 1
+      description: Risk of tests (1-3)
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments (e.g., --dbs, --tables)
+  output:
+    format: text
+    type: sqli_findings
+  timeout: 1800
+
+parse:
+  type: regex
+  schema:
+    vulnerable:
+      regex: "is vulnerable"
+    parameter:
+      regex: "Parameter: (.+?)(?:\\s|$)"
+      group: 1
+    injection_type:
+      regex: "Type: (.+)"
+      group: 1
+    payload:
+      regex: "Payload: (.+)"
+      group: 1
+
+capabilities:
+  - sqli_detection
+  - database_enumeration
+  - data_extraction
+  - os_shell
+
+resources:
+  cpu: medium
+  memory: medium
+  network: moderate
+
+notes:
+  - "Use with caution - can modify data"
+  - "Always use --batch for non-interactive mode"
+  - "Consider --technique to limit injection types"

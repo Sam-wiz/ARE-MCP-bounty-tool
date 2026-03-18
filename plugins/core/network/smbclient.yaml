@@ -1,0 +1,36 @@
+# Smbclient - SMB client
+name: smbclient
+category: network.smb
+version: "4.17"
+description: SMB client utility
+
+install:
+  method: apt
+  command: apt-get install -y smbclient
+  verify: smbclient --version
+
+execute:
+  command: smbclient -L //{host} -U {user}%{password}
+  input:
+    host:
+      type: string
+      required: true
+    user:
+      type: string
+      default: ""
+    password:
+      type: string
+      default: ""
+  output:
+    format: text
+    type: smb_listing
+  timeout: 120
+
+capabilities:
+  - smb_client
+  - file_transfer
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

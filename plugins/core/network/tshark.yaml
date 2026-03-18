@@ -1,0 +1,36 @@
+# Wireshark CLI - Packet capture
+name: tshark
+category: network.capture
+version: "4.0"
+description: Network protocol analyzer (CLI)
+
+install:
+  method: apt
+  command: apt-get install -y tshark
+  verify: tshark --version
+
+execute:
+  command: tshark -i {interface} -w {output_file} -c {count}
+  input:
+    interface:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/capture.pcap"
+    count:
+      type: number
+      default: 1000
+  output:
+    format: pcap
+    type: packet_capture
+  timeout: 3600
+
+capabilities:
+  - packet_capture
+  - protocol_analysis
+
+resources:
+  cpu: medium
+  memory: high
+  network: high

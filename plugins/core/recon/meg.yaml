@@ -1,0 +1,36 @@
+# Meg - Fetch many paths for many hosts
+name: meg
+category: recon.fetch
+version: "0.3.0"
+description: Fetch many paths for many hosts
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/meg@latest
+  verify: which meg
+
+execute:
+  command: meg {paths_file} {hosts_file} {output_dir}
+  input:
+    paths_file:
+      type: string
+      required: true
+    hosts_file:
+      type: string
+      required: true
+    output_dir:
+      type: string
+      default: "/tmp/meg"
+  output:
+    format: directory
+    type: responses
+  timeout: 3600
+
+capabilities:
+  - bulk_fetching
+  - path_enumeration
+
+resources:
+  cpu: medium
+  memory: medium
+  network: very_high

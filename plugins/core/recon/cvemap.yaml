@@ -1,0 +1,31 @@
+# CVEMap - CVE mapping
+name: cvemap
+category: recon.osint
+version: "0.0.5"
+description: Navigate CVE jungle with ease
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/cvemap/cmd/cvemap@latest
+  verify: cvemap -version
+
+execute:
+  command: cvemap -id {cve_id} -json
+  input:
+    cve_id:
+      type: string
+      required: true
+  output:
+    format: json
+    type: cve_info
+  timeout: 60
+
+capabilities:
+  - cve_lookup
+  - exploit_info
+  - severity_info
+
+resources:
+  cpu: low
+  memory: low
+  network: low

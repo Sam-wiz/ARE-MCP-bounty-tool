@@ -1,0 +1,30 @@
+# Linkfinder
+name: linkfinder
+category: recon.js
+version: "1.0.0"
+description: Find endpoints in JavaScript files
+
+install:
+  method: git
+  command: git clone https://github.com/GerbenJavado/LinkFinder.git && pip install -r requirements.txt
+  verify: python3 linkfinder.py -h
+
+execute:
+  command: python3 linkfinder.py -i {url} -o cli
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: text
+    type: endpoints
+  timeout: 300
+
+capabilities:
+  - endpoint_extraction
+  - js_parsing
+
+resources:
+  cpu: low
+  memory: low
+  network: low

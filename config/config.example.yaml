@@ -1,0 +1,60 @@
+# hack-ai-v2 Configuration
+# Copy this to config.yaml and edit with your settings
+
+# MongoDB Configuration
+# For local: mongodb://localhost:27017
+# For Atlas: mongodb+srv://user:password@cluster.mongodb.net/hack-ai
+mongodb:
+  uri: "mongodb://localhost:27017"
+  database: "hack_ai_v2"
+  
+# Redis Configuration  
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+# Workspace Configuration
+workspace:
+  base_dir: "" # Empty = ~/bounty-programs
+  auto_create: true
+
+# OPSEC Configuration
+opsec:
+  enabled: false
+  mac_spoof:
+    enabled: false
+    interface: "" # Auto-detect if empty
+  proxy_chain: []
+  tor:
+    enabled: false
+    socks_port: 9050
+    control_port: 9051
+  vpn:
+    enabled: false
+    config_file: ""
+
+# Tool Execution
+tools:
+  timeout: 3600 # Default timeout in seconds
+  max_concurrent: 5
+  rate_limit: 10 # Requests per second
+
+# Validation Pipeline
+validation:
+  default_level: 3 # 1=detect, 2=verify, 3=PoC, 4=exploit
+  evidence_dir: "" # Empty = workspace/evidence
+  screenshot_on_finding: true
+  
+# Reporting
+reporting:
+  output_dir: "" # Empty = workspace/reports
+  formats: ["json", "markdown"]
+  include_poc: true
+  include_evidence: true
+
+# Logging
+logging:
+  level: "info" # debug, info, warn, error
+  to_file: true
+  to_mongodb: true

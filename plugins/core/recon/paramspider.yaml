@@ -1,0 +1,33 @@
+# Paramspider
+name: paramspider
+category: recon.params
+version: "2.0.0"
+description: Mining parameters from dark corners of Web Archives
+
+install:
+  method: pip
+  command: pip3 install paramspider
+  verify: paramspider --help
+
+execute:
+  command: paramspider -d {domain} -o {output_file}
+  input:
+    domain:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/params.txt"
+  output:
+    format: lines
+    type: urls_with_params
+  timeout: 900
+
+capabilities:
+  - parameter_mining
+  - wayback_params
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

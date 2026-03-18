@@ -1,0 +1,33 @@
+# Subjack - Subdomain takeover
+name: subjack
+category: testing.takeover
+version: "1.0.0"
+description: Subdomain takeover tool
+
+install:
+  method: go
+  command: go install github.com/haccer/subjack@latest
+  verify: subjack -h
+
+execute:
+  command: subjack -w {input_file} -t 100 -timeout 30 -o {output_file} -ssl
+  input:
+    input_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/subjack.txt"
+  output:
+    format: lines
+    type: takeover_findings
+  timeout: 1800
+
+capabilities:
+  - takeover_detection
+  - fingerprint_matching
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

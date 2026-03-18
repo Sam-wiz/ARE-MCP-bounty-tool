@@ -1,0 +1,34 @@
+# Gf - Grep for patterns
+name: gf
+category: utility
+version: "1.0.0"
+description: A wrapper around grep for pattern matching
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/gf@latest
+  verify: which gf
+
+execute:
+  command: cat {input_file} | gf {pattern}
+  input:
+    input_file:
+      type: string
+      required: true
+    pattern:
+      type: string
+      required: true
+      description: "xss, sqli, ssrf, redirect, etc."
+  output:
+    format: lines
+    type: matched_urls
+  timeout: 300
+
+capabilities:
+  - pattern_matching
+  - url_filtering
+
+resources:
+  cpu: low
+  memory: low
+  network: none

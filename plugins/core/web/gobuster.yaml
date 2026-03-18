@@ -1,0 +1,40 @@
+# Gobuster
+name: gobuster
+category: testing.fuzzing
+version: "3.6.0"
+description: Directory/file & DNS busting tool
+
+install:
+  method: go
+  command: go install github.com/OJ/gobuster/v3@latest
+  verify: gobuster version
+
+execute:
+  command: gobuster dir -u {url} -w {wordlist} -o {output_file} -t {threads}
+  input:
+    url:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      default: "/usr/share/wordlists/dirb/common.txt"
+    output_file:
+      type: string
+      default: "/tmp/gobuster.txt"
+    threads:
+      type: number
+      default: 50
+  output:
+    format: text
+    type: paths
+  timeout: 3600
+
+capabilities:
+  - directory_busting
+  - dns_busting
+  - vhost_discovery
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

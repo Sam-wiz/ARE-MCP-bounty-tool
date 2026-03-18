@@ -1,0 +1,33 @@
+# ProtonVPN CLI — Free VPN with country selection
+name: protonvpn-cli
+category: proxy
+version: "3.13"
+description: ProtonVPN command-line client with country selection for IP masking
+
+install:
+  method: pip
+  command: pip3 install protonvpn-cli
+  verify: protonvpn-cli --version
+
+execute:
+  command: protonvpn-cli connect --cc {country}
+  input:
+    country:
+      type: string
+      default: "US"
+      description: "ISO country code (US, NL, JP, DE, GB, etc.)"
+  output:
+    format: text
+    type: status
+  timeout: 30
+
+capabilities:
+  - ip_masking
+  - geo_selection
+  - vpn_tunnel
+  - kill_switch
+
+resources:
+  cpu: low
+  memory: low
+  network: high

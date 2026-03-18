@@ -1,0 +1,36 @@
+# Massdns - High-performance DNS resolver
+name: massdns
+category: recon.dns
+version: "1.0.0"
+description: High-performance DNS stub resolver
+
+install:
+  method: git
+  command: git clone https://github.com/blechschmidt/massdns.git && cd massdns && make
+  verify: ./bin/massdns --help
+
+execute:
+  command: ./bin/massdns -r {resolvers} -t A -o S -w {output_file} {input_file}
+  input:
+    input_file:
+      type: string
+      required: true
+    resolvers:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/massdns.txt"
+  output:
+    format: text
+    type: dns_records
+  timeout: 3600
+
+capabilities:
+  - mass_resolution
+  - high_performance
+
+resources:
+  cpu: high
+  memory: high
+  network: very_high

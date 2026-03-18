@@ -1,0 +1,30 @@
+# Reconftw - Automated recon
+name: reconftw
+category: recon.framework
+version: "2.7.1"
+description: Automated reconnaissance workflow
+
+install:
+  method: git
+  command: git clone https://github.com/six2dez/reconftw.git && ./reconftw.sh --install
+  verify: ./reconftw.sh -h
+
+execute:
+  command: ./reconftw.sh -d {domain} -r
+  input:
+    domain:
+      type: string
+      required: true
+  output:
+    format: directory
+    type: full_recon
+  timeout: 86400
+
+capabilities:
+  - automated_recon
+  - tool_orchestration
+
+resources:
+  cpu: high
+  memory: high
+  network: very_high

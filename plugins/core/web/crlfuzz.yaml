@@ -1,0 +1,33 @@
+# CRLFuzz - CRLF Injection
+name: crlfuzz
+category: testing.crlf
+version: "1.4.1"
+description: Fast CRLF injection scanner
+
+install:
+  method: go
+  command: go install github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest
+  verify: crlfuzz -version
+
+execute:
+  command: crlfuzz -u {url} -s -o {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/crlfuzz.txt"
+  output:
+    format: lines
+    type: crlf_findings
+  timeout: 600
+
+capabilities:
+  - crlf_injection
+  - header_injection
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

@@ -1,0 +1,78 @@
+# OPSEC Configuration
+# Configure protection layers before aggressive testing
+
+enabled: true
+
+# Proxy chain (traffic goes through these in order)
+proxy_chain:
+  - type: socks5
+    host: 127.0.0.1
+    port: 9050  # Tor default
+  # Add more proxies as needed
+  # - type: http
+  #   host: proxy.example.com
+  #   port: 8080
+  #   username: user
+  #   password: pass
+
+# MAC address spoofing
+mac_spoof:
+  enabled: false
+  interface: en0  # Network interface
+  # If not specified, random MAC will be used
+  # custom_mac: "00:11:22:33:44:55"
+  # tool: spoofmac  # or "macchanger" (Linux only)
+
+# VPN configuration
+vpn:
+  enabled: false
+  # Provider: "protonvpn" (free, recommended) or "openvpn"
+  provider: "protonvpn"
+  # ISO country code — select which country to get your IP from
+  # Free tier supports: US, NL, JP
+  # Paid tier adds: DE, GB, FR, CA, AU, SG, IN, BR, and 50+ more
+  country: "US"
+  # Alternative countries for rotation:
+  #   US — United States      NL — Netherlands
+  #   JP — Japan              CH — Switzerland
+  #   DE — Germany            GB — United Kingdom
+  #   FR — France             CA — Canada
+  #   AU — Australia          SG — Singapore
+  #   IN — India              BR — Brazil
+  config_file: ""  # Only needed for openvpn provider — path to .ovpn file
+
+# Tor configuration
+tor:
+  enabled: true
+  socks_port: 9050
+  control_port: 9051
+  # new_circuit_per_request: false
+
+# DNS configuration
+dns:
+  servers:
+    - 1.1.1.1
+    - 8.8.8.8
+  # Use DNS over HTTPS
+  doh: false
+  doh_server: "https://cloudflare-dns.com/dns-query"
+
+# Clean environment
+clean_env:
+  # Clear browser data before testing
+  clear_browser: true
+  # Use fresh temp directories
+  use_temp_dirs: true
+  # Don't leave traces in history
+  no_history: true
+
+# Verification checks
+verification:
+  check_ip: true
+  check_dns_leak: true
+  check_webrtc: true
+  check_fingerprint: false
+  
+  # Services to use for verification
+  ip_check_url: "https://api.ipify.org?format=json"
+  dns_leak_url: "https://dnsleaktest.com"

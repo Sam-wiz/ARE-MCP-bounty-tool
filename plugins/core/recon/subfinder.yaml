@@ -1,0 +1,43 @@
+# Subfinder - Subdomain Discovery
+name: subfinder
+category: recon.subdomain
+version: "2.6.0"
+description: Fast passive subdomain enumeration tool
+
+install:
+  method: go
+  command: go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+  verify: subfinder -version
+
+execute:
+  command: subfinder -d {domain} -silent {extra_args}
+  input:
+    domain:
+      type: string
+      required: true
+      description: Target domain to enumerate
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: lines
+    type: subdomains
+  timeout: 300
+
+parse:
+  type: line-per-result
+  schema:
+    subdomain:
+      regex: "^(.+)$"
+      group: 1
+
+capabilities:
+  - subdomain_enumeration
+  - passive_recon
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

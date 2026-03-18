@@ -1,0 +1,36 @@
+# Android Emulator - Virtual device for mobile app testing
+name: android_emulator
+category: mobile.emulator
+version: "latest"
+description: Android emulator for automated mobile app security testing
+
+install:
+  method: sdk
+  command: sdkmanager --install "emulator" "platform-tools"
+  verify: emulator -version
+
+execute:
+  command: emulator -avd {avd_name} {flags}
+  input:
+    avd_name:
+      type: string
+      required: true
+    flags:
+      type: string
+      default: "-no-window -no-audio -no-boot-anim"
+  output:
+    format: text
+    type: emulator_session
+  timeout: 3600
+
+capabilities:
+  - app_testing
+  - dynamic_analysis
+  - ssl_pinning_bypass
+  - runtime_inspection
+  - automated_interaction
+
+resources:
+  cpu: high
+  memory: high
+  network: variable

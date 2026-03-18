@@ -1,0 +1,36 @@
+# Tcpdump - Packet capture
+name: tcpdump
+category: network.capture
+version: "4.99"
+description: Command-line packet analyzer
+
+install:
+  method: apt
+  command: apt-get install -y tcpdump
+  verify: tcpdump --version
+
+execute:
+  command: tcpdump -i {interface} -w {output_file} -c {count}
+  input:
+    interface:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/tcpdump.pcap"
+    count:
+      type: number
+      default: 1000
+  output:
+    format: pcap
+    type: packet_capture
+  timeout: 3600
+
+capabilities:
+  - packet_capture
+  - network_debugging
+
+resources:
+  cpu: low
+  memory: medium
+  network: high

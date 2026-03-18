@@ -1,0 +1,32 @@
+# Interactsh - OOB interaction client
+name: interactsh
+category: testing.oob
+version: "1.1.8"
+description: Out-of-band testing without Burp
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest
+  verify: interactsh-client -version
+
+execute:
+  command: interactsh-client -json -o {output_file}
+  input:
+    output_file:
+      type: string
+      default: "/tmp/interactsh.json"
+  output:
+    format: json
+    type: oob_interactions
+  timeout: 3600
+
+capabilities:
+  - oob_testing
+  - dns_oob
+  - http_oob
+  - smtp_oob
+
+resources:
+  cpu: low
+  memory: low
+  network: low

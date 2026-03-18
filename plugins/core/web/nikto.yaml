@@ -1,0 +1,34 @@
+# Nikto
+name: nikto
+category: testing.web
+version: "2.5.0"
+description: Web server scanner
+
+install:
+  method: apt
+  command: apt-get install -y nikto
+  verify: nikto -Version
+
+execute:
+  command: nikto -h {target} -Format json -o {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/nikto.json"
+  output:
+    format: json
+    type: web_findings
+  timeout: 3600
+
+capabilities:
+  - web_server_scanning
+  - misconfig_detection
+  - default_files
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

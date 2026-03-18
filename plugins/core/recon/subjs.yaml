@@ -1,0 +1,30 @@
+# SubJS - JS files from subdomains
+name: subjs
+category: recon.js
+version: "1.0.0"
+description: Fetch javascript files from a list of subdomains
+
+install:
+  method: go
+  command: go install github.com/lc/subjs@latest
+  verify: which subjs
+
+execute:
+  command: cat {input_file} | subjs
+  input:
+    input_file:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: js_urls
+  timeout: 900
+
+capabilities:
+  - js_extraction
+  - subdomain_js
+
+resources:
+  cpu: low
+  memory: low
+  network: high

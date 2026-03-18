@@ -1,0 +1,35 @@
+# Tplmap - SSTI Detection
+name: tplmap
+category: testing.ssti
+version: "0.5.0"
+description: Server-Side Template Injection detection and exploitation
+
+install:
+  method: git
+  command: git clone https://github.com/epinna/tplmap.git && cd tplmap && pip install -r requirements.txt
+  verify: python3 tplmap.py --help
+
+execute:
+  command: python3 tplmap.py -u "{url}" --os-shell {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+      description: URL with injectable parameter
+    extra_args:
+      type: string
+      default: ""
+  output:
+    format: text
+    type: ssti_findings
+  timeout: 1800
+
+capabilities:
+  - ssti_detection
+  - template_engine_detection
+  - code_execution
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

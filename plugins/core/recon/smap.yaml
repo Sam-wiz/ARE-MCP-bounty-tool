@@ -1,0 +1,33 @@
+# Smap - Shodan replacement
+name: smap
+category: recon.osint
+version: "0.1.12"
+description: Passive Nmap-like scanner using Shodan
+
+install:
+  method: go
+  command: go install github.com/s0md3v/smap/cmd/smap@latest
+  verify: smap -h
+
+execute:
+  command: smap {target} -oN {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/smap.txt"
+  output:
+    format: text
+    type: port_info
+  timeout: 300
+
+capabilities:
+  - passive_scanning
+  - shodan_data
+
+resources:
+  cpu: low
+  memory: low
+  network: low

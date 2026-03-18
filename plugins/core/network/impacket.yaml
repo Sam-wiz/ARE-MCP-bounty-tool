@@ -1,0 +1,34 @@
+# Impacket - Network protocols
+name: impacket
+category: network.tools
+version: "0.11.0"
+description: Collection of Python classes for network protocols
+
+install:
+  method: pip
+  command: pip3 install impacket
+  verify: python3 -c "import impacket"
+
+execute:
+  command: impacket-{script} {args}
+  input:
+    script:
+      type: string
+      required: true
+    args:
+      type: string
+      required: true
+  output:
+    format: text
+    type: network_results
+  timeout: 1800
+
+capabilities:
+  - smb_tools
+  - kerberos_tools
+  - wmi_tools
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

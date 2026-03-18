@@ -1,0 +1,30 @@
+# Droopescan - Drupal scanner
+name: droopescan
+category: testing.cms
+version: "1.45.1"
+description: Drupal CMS scanner
+
+install:
+  method: pip
+  command: pip3 install droopescan
+  verify: droopescan --version
+
+execute:
+  command: droopescan scan drupal -u {url} -o json
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: json
+    type: drupal_findings
+  timeout: 1200
+
+capabilities:
+  - drupal_scanning
+  - silverstripe_scanning
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

@@ -1,0 +1,33 @@
+# Httprobe - Probe for working HTTP/HTTPS servers
+name: httprobe
+category: recon.probing
+version: "0.2.0"
+description: Take a list of domains and probe for HTTP/HTTPS servers
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/httprobe@latest
+  verify: which httprobe
+
+execute:
+  command: cat {input_file} | httprobe -c {concurrency}
+  input:
+    input_file:
+      type: string
+      required: true
+    concurrency:
+      type: number
+      default: 50
+  output:
+    format: lines
+    type: urls
+  timeout: 1800
+
+capabilities:
+  - http_probing
+  - https_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: high

@@ -1,0 +1,34 @@
+# Maltego - OSINT platform
+name: maltego
+category: recon.osint
+version: "4.5.0"
+description: Interactive data mining tool
+
+install:
+  method: manual
+  command: echo "Download from maltego.com"
+  verify: which maltego
+
+execute:
+  command: maltego --transform {transform} --input {input}
+  input:
+    transform:
+      type: string
+      required: true
+    input:
+      type: string
+      required: true
+  output:
+    format: xml
+    type: maltego_graph
+  timeout: 1800
+
+capabilities:
+  - osint
+  - graph_analysis
+  - transforms
+
+resources:
+  cpu: medium
+  memory: high
+  network: moderate

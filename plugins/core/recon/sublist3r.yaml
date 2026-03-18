@@ -1,0 +1,33 @@
+# Sublist3r
+name: sublist3r
+category: recon.subdomains
+version: "1.1.0"
+description: Fast subdomain enumeration tool
+
+install:
+  method: git
+  command: git clone https://github.com/aboul3la/Sublist3r.git && pip install -r requirements.txt
+  verify: python3 sublist3r.py -h
+
+execute:
+  command: python3 sublist3r.py -d {domain} -o {output_file}
+  input:
+    domain:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/sublist3r.txt"
+  output:
+    format: lines
+    type: subdomains
+  timeout: 900
+
+capabilities:
+  - subdomain_enum
+  - search_engine_enum
+
+resources:
+  cpu: low
+  memory: low
+  network: high

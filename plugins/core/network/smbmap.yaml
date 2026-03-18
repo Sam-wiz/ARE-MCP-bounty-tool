@@ -1,0 +1,36 @@
+# Smbmap - SMB drive mapper
+name: smbmap
+category: network.smb
+version: "1.9.2"
+description: SMB share enumeration tool
+
+install:
+  method: pip
+  command: pip3 install smbmap
+  verify: smbmap -h
+
+execute:
+  command: smbmap -H {host} -u {user} -p {password}
+  input:
+    host:
+      type: string
+      required: true
+    user:
+      type: string
+      default: ""
+    password:
+      type: string
+      default: ""
+  output:
+    format: text
+    type: smb_shares
+  timeout: 300
+
+capabilities:
+  - share_enumeration
+  - permission_checking
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

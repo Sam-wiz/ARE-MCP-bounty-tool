@@ -1,0 +1,30 @@
+# SubOver - Subdomain Takeover
+name: subover
+category: testing.takeover
+version: "1.2.0"
+description: A Powerful Subdomain Takeover Tool
+
+install:
+  method: go
+  command: go install github.com/Ice3man543/SubOver@latest
+  verify: which SubOver
+
+execute:
+  command: SubOver -l {input_file}
+  input:
+    input_file:
+      type: string
+      required: true
+  output:
+    format: text
+    type: takeover_findings
+  timeout: 1800
+
+capabilities:
+  - subdomain_takeover
+  - cname_analysis
+
+resources:
+  cpu: low
+  memory: low
+  network: high

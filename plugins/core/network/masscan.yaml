@@ -1,0 +1,39 @@
+# Masscan
+name: masscan
+category: network.scanning
+version: "1.3.2"
+description: Mass IP port scanner
+
+install:
+  method: apt
+  command: apt-get install -y masscan
+  verify: masscan --version
+
+execute:
+  command: masscan {target} -p {ports} --rate {rate} -oJ {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    ports:
+      type: string
+      default: "1-65535"
+    rate:
+      type: number
+      default: 10000
+    output_file:
+      type: string
+      default: "/tmp/masscan.json"
+  output:
+    format: json
+    type: port_scan
+  timeout: 3600
+
+capabilities:
+  - fast_port_scanning
+  - mass_scanning
+
+resources:
+  cpu: high
+  memory: medium
+  network: very_high

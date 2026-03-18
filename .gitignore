@@ -1,0 +1,76 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+*.o
+*.a
+*.test
+*.out
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Config with secrets
+config/config.yaml
+config/secrets.yaml
+*.pem
+*.key
+*.crt
+
+# Logs and temp files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# Workspace outputs (created per bounty program)
+workspaces/
+
+# Evidence and findings (sensitive data)
+evidence/
+findings/
+reports/*.json
+reports/*.md
+
+# Tool outputs
+*.har
+*.pcap
+*.flow
+
+# Nuclei cache
+~/.nuclei/
+
+# Redis/Mongo local data
+data/
+*.rdb
+
+# OS files
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Test files
+coverage.out
+coverage.html
+
+# Keep example configs
+!config/config.example.yaml
+!config/opsec.yaml
+!config/checklists/
+
+# Keep scripts
+!scripts/
+!scripts/**

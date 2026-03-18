@@ -1,0 +1,36 @@
+# Chaos
+name: chaos
+category: recon.subdomains
+version: "0.5.1"
+description: ProjectDiscovery's subdomain discovery from chaos dataset
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/chaos-client/cmd/chaos@latest
+  verify: chaos -version
+
+execute:
+  command: chaos -d {domain} -o {output_file} -key {api_key}
+  input:
+    domain:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/chaos.txt"
+    api_key:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: subdomains
+  timeout: 300
+
+capabilities:
+  - subdomain_enum
+  - chaos_dataset
+
+resources:
+  cpu: low
+  memory: low
+  network: low

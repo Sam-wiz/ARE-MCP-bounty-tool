@@ -1,0 +1,31 @@
+# Testssl.sh - TLS/SSL testing
+name: testssl
+category: testing.tls
+version: "3.2"
+description: Testing TLS/SSL encryption
+
+install:
+  method: git
+  command: git clone https://github.com/drwetter/testssl.sh.git
+  verify: ./testssl.sh --help
+
+execute:
+  command: ./testssl.sh --json {target}
+  input:
+    target:
+      type: string
+      required: true
+  output:
+    format: json
+    type: tls_findings
+  timeout: 1800
+
+capabilities:
+  - tls_testing
+  - cipher_analysis
+  - vulnerability_check
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

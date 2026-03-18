@@ -1,0 +1,31 @@
+# Burp Collaborator Client
+name: collaborator
+category: testing.oob
+version: "1.0.0"
+description: Out-of-band testing with Burp Collaborator
+
+install:
+  method: custom
+  command: echo "Requires Burp Suite Pro"
+  verify: echo "Manual setup required"
+
+execute:
+  command: curl -s "https://burpcollaborator.net/burpresults?biid={biid}"
+  input:
+    biid:
+      type: string
+      required: true
+  output:
+    format: json
+    type: oob_interactions
+  timeout: 60
+
+capabilities:
+  - oob_testing
+  - dns_oob
+  - http_oob
+
+resources:
+  cpu: low
+  memory: low
+  network: low

@@ -1,0 +1,30 @@
+# Headers - Security headers checker
+name: shcheck
+category: testing.headers
+version: "1.0.0"
+description: Security headers checker
+
+install:
+  method: git
+  command: git clone https://github.com/santoru/shcheck.git
+  verify: python3 shcheck.py -h
+
+execute:
+  command: python3 shcheck.py -j {url}
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: json
+    type: header_findings
+  timeout: 60
+
+capabilities:
+  - header_analysis
+  - security_headers
+
+resources:
+  cpu: low
+  memory: low
+  network: low

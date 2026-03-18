@@ -1,0 +1,34 @@
+# APKTool
+name: apktool
+category: mobile.static
+version: "2.7.0"
+description: Android APK reverse engineering tool
+
+install:
+  method: apt
+  command: apt-get install -y apktool
+  verify: apktool --version
+
+execute:
+  command: apktool d {apk_file} -o {output_dir} -f
+  input:
+    apk_file:
+      type: string
+      required: true
+    output_dir:
+      type: string
+      default: "/tmp/apktool_output"
+  output:
+    format: directory
+    type: decompiled_apk
+  timeout: 600
+
+capabilities:
+  - apk_decompilation
+  - resource_extraction
+  - manifest_analysis
+
+resources:
+  cpu: high
+  memory: high
+  network: none

@@ -1,0 +1,34 @@
+# WhatWeb - Web technology fingerprinting
+name: whatweb
+category: recon.fingerprint
+version: "0.5.5"
+description: Next generation web scanner
+
+install:
+  method: apt
+  command: apt-get install -y whatweb
+  verify: whatweb --version
+
+execute:
+  command: whatweb {target} --log-json={output_file}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/whatweb.json"
+  output:
+    format: json
+    type: tech_stack
+  timeout: 600
+
+capabilities:
+  - technology_detection
+  - cms_detection
+  - version_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

@@ -1,0 +1,36 @@
+# Alterx - Subdomain wordlist generation
+name: alterx
+category: recon.subdomains
+version: "0.0.4"
+description: Fast and configurable subdomain wordlist generator
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/alterx/cmd/alterx@latest
+  verify: alterx -version
+
+execute:
+  command: echo {subdomain} | alterx -p {pattern} -o {output_file}
+  input:
+    subdomain:
+      type: string
+      required: true
+    pattern:
+      type: string
+      default: "{{word}}.{{suffix}}"
+    output_file:
+      type: string
+      default: "/tmp/alterx.txt"
+  output:
+    format: lines
+    type: subdomains
+  timeout: 300
+
+capabilities:
+  - wordlist_generation
+  - subdomain_permutation
+
+resources:
+  cpu: low
+  memory: low
+  network: none

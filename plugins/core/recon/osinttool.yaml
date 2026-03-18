@@ -1,0 +1,33 @@
+# OSINT Framework tool
+name: osinttool
+category: recon.osint
+version: "1.0.0"
+description: OSINT data collection
+
+install:
+  method: custom
+  command: echo "Collection of OSINT sources"
+  verify: echo "OSINT ready"
+
+execute:
+  command: curl -s "https://api.hunter.io/v2/domain-search?domain={domain}&api_key={api_key}"
+  input:
+    domain:
+      type: string
+      required: true
+    api_key:
+      type: string
+      required: true
+  output:
+    format: json
+    type: osint_data
+  timeout: 60
+
+capabilities:
+  - email_hunting
+  - domain_info
+
+resources:
+  cpu: low
+  memory: low
+  network: low

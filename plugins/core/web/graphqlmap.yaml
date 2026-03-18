@@ -1,0 +1,31 @@
+# GraphQL Introspection
+name: graphqlmap
+category: testing.api
+version: "1.0.0"
+description: GraphQL security testing
+
+install:
+  method: git
+  command: git clone https://github.com/swisskyrepo/GraphQLmap.git && pip install -r requirements.txt
+  verify: python3 graphqlmap.py -h
+
+execute:
+  command: python3 graphqlmap.py -u {url} -v
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: text
+    type: graphql_findings
+  timeout: 900
+
+capabilities:
+  - graphql_introspection
+  - field_enumeration
+  - mutation_testing
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

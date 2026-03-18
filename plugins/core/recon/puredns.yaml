@@ -1,0 +1,40 @@
+# Puredns - Fast DNS resolver
+name: puredns
+category: recon.dns
+version: "2.1.1"
+description: Fast domain resolver and subdomain bruteforcing
+
+install:
+  method: go
+  command: go install github.com/d3mondev/puredns/v2@latest
+  verify: puredns version
+
+execute:
+  command: puredns bruteforce {wordlist} {domain} -r {resolvers} -w {output_file}
+  input:
+    domain:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      required: true
+    resolvers:
+      type: string
+      default: "~/.puredns/resolvers.txt"
+    output_file:
+      type: string
+      default: "/tmp/puredns.txt"
+  output:
+    format: lines
+    type: subdomains
+  timeout: 7200
+
+capabilities:
+  - dns_bruteforce
+  - wildcard_filtering
+  - mass_resolution
+
+resources:
+  cpu: high
+  memory: medium
+  network: very_high

@@ -1,0 +1,36 @@
+# Cewl - Custom wordlist
+name: cewl
+category: utility.wordlist
+version: "5.5.2"
+description: Custom wordlist generator
+
+install:
+  method: apt
+  command: apt-get install -y cewl
+  verify: cewl -h
+
+execute:
+  command: cewl {url} -d {depth} -w {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    depth:
+      type: number
+      default: 2
+    output_file:
+      type: string
+      default: "/tmp/cewl.txt"
+  output:
+    format: lines
+    type: wordlist
+  timeout: 600
+
+capabilities:
+  - wordlist_generation
+  - web_scraping
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

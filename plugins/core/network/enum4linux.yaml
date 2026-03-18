@@ -1,0 +1,31 @@
+# Enum4linux - SMB enumeration
+name: enum4linux
+category: network.smb
+version: "0.9.1"
+description: Windows/Samba enumeration tool
+
+install:
+  method: apt
+  command: apt-get install -y enum4linux
+  verify: enum4linux -h
+
+execute:
+  command: enum4linux -a {target}
+  input:
+    target:
+      type: string
+      required: true
+  output:
+    format: text
+    type: smb_info
+  timeout: 600
+
+capabilities:
+  - smb_enumeration
+  - user_enumeration
+  - share_enumeration
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

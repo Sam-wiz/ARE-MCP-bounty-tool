@@ -1,0 +1,40 @@
+# Feroxbuster
+name: feroxbuster
+category: testing.fuzzing
+version: "2.10.0"
+description: Fast, simple, recursive content discovery
+
+install:
+  method: cargo
+  command: cargo install feroxbuster
+  verify: feroxbuster --version
+
+execute:
+  command: feroxbuster -u {url} -w {wordlist} -o {output_file} --json -t {threads}
+  input:
+    url:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      default: "/usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt"
+    output_file:
+      type: string
+      default: "/tmp/feroxbuster.json"
+    threads:
+      type: number
+      default: 50
+  output:
+    format: json
+    type: paths
+  timeout: 3600
+
+capabilities:
+  - recursive_discovery
+  - fast_fuzzing
+  - status_filtering
+
+resources:
+  cpu: medium
+  memory: medium
+  network: very_high

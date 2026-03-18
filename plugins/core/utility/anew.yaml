@@ -1,0 +1,33 @@
+# Anew - Append new lines
+name: anew
+category: utility
+version: "0.1.1"
+description: Append lines from stdin to a file if not already present
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/anew@latest
+  verify: which anew
+
+execute:
+  command: cat {input_file} | anew {output_file}
+  input:
+    input_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: unique_lines
+  timeout: 60
+
+capabilities:
+  - deduplication
+  - file_append
+
+resources:
+  cpu: low
+  memory: low
+  network: none

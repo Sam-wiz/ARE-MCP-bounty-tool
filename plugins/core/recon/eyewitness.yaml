@@ -1,0 +1,34 @@
+# Eyewitness - Screenshot
+name: eyewitness
+category: recon.screenshot
+version: "20191104"
+description: Take screenshots of websites
+
+install:
+  method: git
+  command: git clone https://github.com/RedSiege/EyeWitness.git && cd EyeWitness/Python/setup && ./setup.sh
+  verify: python3 EyeWitness.py -h
+
+execute:
+  command: python3 EyeWitness.py -f {input_file} -d {output_dir} --web
+  input:
+    input_file:
+      type: string
+      required: true
+    output_dir:
+      type: string
+      default: "/tmp/eyewitness"
+  output:
+    format: html
+    type: screenshots
+  timeout: 3600
+
+capabilities:
+  - web_screenshots
+  - reporting
+  - service_detection
+
+resources:
+  cpu: medium
+  memory: high
+  network: high

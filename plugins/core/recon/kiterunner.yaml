@@ -1,0 +1,37 @@
+# Kiterunner - API Discovery
+name: kiterunner
+category: recon.api
+version: "1.0.2"
+description: Contextual content discovery for APIs
+
+install:
+  method: go
+  command: go install github.com/assetnote/kiterunner/cmd/kr@latest
+  verify: kr --help
+
+execute:
+  command: kr scan {url} -w {wordlist} -o json --output {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      default: "/usr/share/kiterunner/routes-large.kite"
+    output_file:
+      type: string
+      default: "/tmp/kiterunner.json"
+  output:
+    format: json
+    type: api_endpoints
+  timeout: 3600
+
+capabilities:
+  - api_discovery
+  - swagger_guessing
+  - route_discovery
+
+resources:
+  cpu: high
+  memory: high
+  network: very_high

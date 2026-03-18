@@ -1,0 +1,41 @@
+# Kerbrute - Kerberos bruteforce
+name: kerbrute
+category: auth.kerberos
+version: "1.0.3"
+description: Kerberos bruteforce utility
+
+install:
+  method: go
+  command: go install github.com/ropnop/kerbrute@latest
+  verify: kerbrute --version
+
+execute:
+  command: kerbrute {mode} -d {domain} --dc {dc} {input_file}
+  input:
+    mode:
+      type: string
+      required: true
+      description: "userenum, passwordspray, bruteuser"
+    domain:
+      type: string
+      required: true
+    dc:
+      type: string
+      required: true
+    input_file:
+      type: string
+      required: true
+  output:
+    format: text
+    type: kerberos_results
+  timeout: 3600
+
+capabilities:
+  - user_enumeration
+  - password_spray
+  - bruteforce
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

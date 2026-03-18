@@ -1,0 +1,30 @@
+# Waybackurls
+name: waybackurls
+category: recon.urls
+version: "0.1.0"
+description: Fetch all URLs from Wayback Machine
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/waybackurls@latest
+  verify: which waybackurls
+
+execute:
+  command: echo {domain} | waybackurls
+  input:
+    domain:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: urls
+  timeout: 600
+
+capabilities:
+  - wayback_urls
+  - passive_recon
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

@@ -1,0 +1,37 @@
+# DNSRecon - DNS enumeration
+name: dnsrecon
+category: recon.dns
+version: "1.1.5"
+description: DNS enumeration script
+
+install:
+  method: pip
+  command: pip3 install dnsrecon
+  verify: dnsrecon -h
+
+execute:
+  command: dnsrecon -d {domain} -t {type} -j {output_file}
+  input:
+    domain:
+      type: string
+      required: true
+    type:
+      type: string
+      default: "std"
+    output_file:
+      type: string
+      default: "/tmp/dnsrecon.json"
+  output:
+    format: json
+    type: dns_records
+  timeout: 600
+
+capabilities:
+  - dns_enumeration
+  - zone_transfer
+  - cache_snooping
+
+resources:
+  cpu: low
+  memory: low
+  network: high

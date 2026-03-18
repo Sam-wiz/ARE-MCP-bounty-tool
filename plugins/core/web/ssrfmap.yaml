@@ -1,0 +1,37 @@
+# SSRFmap
+name: ssrfmap
+category: testing.ssrf
+version: "1.0.0"
+description: Automatic SSRF fuzzer and exploitation tool
+
+install:
+  method: git
+  command: git clone https://github.com/swisskyrepo/SSRFmap.git && pip install -r requirements.txt
+  verify: python3 ssrfmap.py --help
+
+execute:
+  command: python3 ssrfmap.py -r {request_file} -p {parameter} -m {module}
+  input:
+    request_file:
+      type: string
+      required: true
+    parameter:
+      type: string
+      required: true
+    module:
+      type: string
+      default: "readfiles"
+  output:
+    format: text
+    type: ssrf_findings
+  timeout: 1200
+
+capabilities:
+  - ssrf_detection
+  - cloud_metadata
+  - internal_scanning
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

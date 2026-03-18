@@ -1,0 +1,37 @@
+# Commix - Command Injection
+name: commix
+category: testing.cmdi
+version: "3.5.0"
+description: Automated OS command injection testing
+
+install:
+  method: git
+  command: git clone https://github.com/commixproject/commix.git
+  verify: python3 commix.py --version
+
+execute:
+  command: python3 commix.py -u "{url}" --batch --level {level} {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+    level:
+      type: number
+      default: 3
+    extra_args:
+      type: string
+      default: ""
+  output:
+    format: text
+    type: cmdi_findings
+  timeout: 1800
+
+capabilities:
+  - command_injection
+  - blind_cmdi
+  - time_based_cmdi
+
+resources:
+  cpu: medium
+  memory: low
+  network: moderate

@@ -1,0 +1,33 @@
+# NoSQLMap - NoSQL injection
+name: nosqlmap
+category: testing.injection
+version: "0.7"
+description: NoSQL database exploitation
+
+install:
+  method: git
+  command: git clone https://github.com/codingo/NoSQLMap.git && pip install -r requirements.txt
+  verify: python3 nosqlmap.py -h
+
+execute:
+  command: python3 nosqlmap.py -u "{url}" --attack {attack}
+  input:
+    url:
+      type: string
+      required: true
+    attack:
+      type: number
+      default: 1
+  output:
+    format: text
+    type: nosql_findings
+  timeout: 1200
+
+capabilities:
+  - nosql_injection
+  - mongodb_exploit
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

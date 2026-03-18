@@ -1,0 +1,32 @@
+# Drozer
+name: drozer
+category: mobile.dynamic
+version: "2.4.4"
+description: Android security assessment framework
+
+install:
+  method: pip
+  command: pip3 install drozer
+  verify: drozer --version
+
+execute:
+  command: drozer console connect -c "{command}"
+  input:
+    command:
+      type: string
+      required: true
+      description: Drozer command to run
+  output:
+    format: text
+    type: android_findings
+  timeout: 600
+
+capabilities:
+  - android_assessment
+  - component_analysis
+  - ipc_testing
+
+resources:
+  cpu: low
+  memory: low
+  network: none

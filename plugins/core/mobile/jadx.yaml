@@ -1,0 +1,34 @@
+# Jadx
+name: jadx
+category: mobile.static
+version: "1.4.7"
+description: Dex to Java decompiler
+
+install:
+  method: apt
+  command: apt-get install -y jadx
+  verify: jadx --version
+
+execute:
+  command: jadx -d {output_dir} {apk_file}
+  input:
+    apk_file:
+      type: string
+      required: true
+    output_dir:
+      type: string
+      default: "/tmp/jadx_output"
+  output:
+    format: directory
+    type: java_source
+  timeout: 900
+
+capabilities:
+  - dex_decompilation
+  - java_source
+  - code_analysis
+
+resources:
+  cpu: high
+  memory: high
+  network: none

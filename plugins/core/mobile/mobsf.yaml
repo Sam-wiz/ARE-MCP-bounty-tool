@@ -1,0 +1,38 @@
+# MobSF - Mobile Security Framework
+name: mobsf
+category: mobile.static
+version: "3.7.0"
+description: Mobile Security Framework for static/dynamic analysis
+
+install:
+  method: docker
+  command: docker pull opensecurity/mobile-security-framework-mobsf
+  verify: docker images | grep mobsf
+
+execute:
+  command: curl -F "file=@{apk_path}" http://localhost:8000/api/v1/upload -H "Authorization: {api_key}"
+  input:
+    apk_path:
+      type: string
+      required: true
+      description: Path to APK/IPA file
+    api_key:
+      type: string
+      required: true
+      description: MobSF API key
+  output:
+    format: json
+    type: mobile_analysis
+  timeout: 1800
+
+capabilities:
+  - static_analysis
+  - manifest_analysis
+  - code_analysis
+  - permission_analysis
+  - hardcoded_secrets
+
+resources:
+  cpu: high
+  memory: high
+  network: none

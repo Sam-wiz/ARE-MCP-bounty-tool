@@ -1,0 +1,33 @@
+# Subdominator - Subdomain takeover
+name: subdominator
+category: testing.takeover
+version: "1.0.0"
+description: Subdomain takeover finder
+
+install:
+  method: pip
+  command: pip3 install subdominator
+  verify: subdominator -h
+
+execute:
+  command: subdominator -l {input_file} -o {output_file}
+  input:
+    input_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/subdominator.txt"
+  output:
+    format: lines
+    type: takeover_findings
+  timeout: 1800
+
+capabilities:
+  - takeover_detection
+  - service_matching
+
+resources:
+  cpu: low
+  memory: low
+  network: high

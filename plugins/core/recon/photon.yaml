@@ -1,0 +1,34 @@
+# Photon - Fast crawler
+name: photon
+category: recon.crawl
+version: "1.3.2"
+description: Incredibly fast crawler designed for OSINT
+
+install:
+  method: pip
+  command: pip3 install photon
+  verify: photon -h
+
+execute:
+  command: photon -u {url} -o {output_dir} --keys --urls
+  input:
+    url:
+      type: string
+      required: true
+    output_dir:
+      type: string
+      default: "/tmp/photon"
+  output:
+    format: directory
+    type: crawl_data
+  timeout: 1800
+
+capabilities:
+  - crawling
+  - key_extraction
+  - url_extraction
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

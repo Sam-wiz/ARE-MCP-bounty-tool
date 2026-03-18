@@ -1,0 +1,30 @@
+# Uro - URL deduplication
+name: uro
+category: utility
+version: "0.0.4"
+description: Declutters URL list for crawling
+
+install:
+  method: pip
+  command: pip3 install uro
+  verify: uro -h
+
+execute:
+  command: cat {input_file} | uro
+  input:
+    input_file:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: urls
+  timeout: 300
+
+capabilities:
+  - url_deduplication
+  - param_dedup
+
+resources:
+  cpu: low
+  memory: low
+  network: none

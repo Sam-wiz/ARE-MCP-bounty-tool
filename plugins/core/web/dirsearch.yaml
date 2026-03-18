@@ -1,0 +1,36 @@
+# Dirsearch
+name: dirsearch
+category: testing.fuzzing
+version: "0.4.3"
+description: Web path discovery tool
+
+install:
+  method: pip
+  command: pip3 install dirsearch
+  verify: dirsearch --help
+
+execute:
+  command: dirsearch -u {url} -e {extensions} --format json -o {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    extensions:
+      type: string
+      default: "php,asp,aspx,jsp,html,js"
+    output_file:
+      type: string
+      default: "/tmp/dirsearch.json"
+  output:
+    format: json
+    type: paths
+  timeout: 3600
+
+capabilities:
+  - path_discovery
+  - recursive_scanning
+
+resources:
+  cpu: low
+  memory: low
+  network: high

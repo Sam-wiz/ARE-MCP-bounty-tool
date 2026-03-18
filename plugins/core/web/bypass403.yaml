@@ -1,0 +1,33 @@
+# Bypass-403 - 403 bypass techniques
+name: bypass403
+category: testing.bypass
+version: "1.0.0"
+description: Bypass 403 forbidden pages
+
+install:
+  method: git
+  command: git clone https://github.com/iamj0ker/bypass-403.git
+  verify: ./bypass-403.sh -h
+
+execute:
+  command: ./bypass-403.sh {url} {path}
+  input:
+    url:
+      type: string
+      required: true
+    path:
+      type: string
+      required: true
+  output:
+    format: text
+    type: bypass_results
+  timeout: 300
+
+capabilities:
+  - 403_bypass
+  - header_manipulation
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

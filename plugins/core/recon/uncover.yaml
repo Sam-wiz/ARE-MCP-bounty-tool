@@ -1,0 +1,38 @@
+# Uncover - API search engine
+name: uncover
+category: recon.osint
+version: "1.0.6"
+description: Quickly discover exposed hosts using multiple search engines
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/uncover/cmd/uncover@latest
+  verify: uncover -version
+
+execute:
+  command: uncover -q {query} -e {engines} -json -o {output_file}
+  input:
+    query:
+      type: string
+      required: true
+    engines:
+      type: string
+      default: "shodan,censys,fofa"
+    output_file:
+      type: string
+      default: "/tmp/uncover.json"
+  output:
+    format: json
+    type: hosts
+  timeout: 600
+
+capabilities:
+  - shodan_search
+  - censys_search
+  - fofa_search
+  - zoomeye_search
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

@@ -1,0 +1,37 @@
+# Arjun - Parameter Discovery
+name: arjun
+category: recon.params
+version: "2.2.1"
+description: HTTP parameter discovery suite
+
+install:
+  method: pip
+  command: pip3 install arjun
+  verify: arjun --help
+
+execute:
+  command: arjun -u {url} -oJ {output_file} -t {threads}
+  input:
+    url:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/arjun.json"
+    threads:
+      type: number
+      default: 10
+  output:
+    format: json
+    type: parameters
+  timeout: 1200
+
+capabilities:
+  - parameter_discovery
+  - hidden_params
+  - get_post_params
+
+resources:
+  cpu: low
+  memory: low
+  network: high

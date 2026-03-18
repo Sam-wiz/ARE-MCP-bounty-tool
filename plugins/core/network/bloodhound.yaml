@@ -1,0 +1,31 @@
+# BloodHound - AD relationship mapping
+name: bloodhound
+category: network.ad
+version: "4.3.1"
+description: Active Directory attack path mapping
+
+install:
+  method: apt
+  command: apt-get install -y bloodhound
+  verify: bloodhound --version
+
+execute:
+  command: bloodhound --import {json_file}
+  input:
+    json_file:
+      type: string
+      required: true
+  output:
+    format: json
+    type: ad_graph
+  timeout: 600
+
+capabilities:
+  - ad_mapping
+  - attack_paths
+  - privilege_escalation
+
+resources:
+  cpu: medium
+  memory: high
+  network: none

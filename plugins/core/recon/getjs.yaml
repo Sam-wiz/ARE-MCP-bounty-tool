@@ -1,0 +1,30 @@
+# GetJS - Get all JS files
+name: getjs
+category: recon.js
+version: "1.0.0"
+description: A tool to quickly fetch all javascript files
+
+install:
+  method: go
+  command: go install github.com/003random/getJS@latest
+  verify: which getJS
+
+execute:
+  command: getJS --url {url} --complete
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: js_urls
+  timeout: 300
+
+capabilities:
+  - js_enumeration
+  - url_js
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

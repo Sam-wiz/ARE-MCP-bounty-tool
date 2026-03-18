@@ -1,0 +1,34 @@
+# Wfuzz
+name: wfuzz
+category: testing.fuzzing
+version: "3.1.0"
+description: Web application fuzzer
+
+install:
+  method: pip
+  command: pip3 install wfuzz
+  verify: wfuzz --help
+
+execute:
+  command: wfuzz -c -z file,{wordlist} --hc 404 -u "{url}/FUZZ" -o json
+  input:
+    url:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      default: "/usr/share/wordlists/dirb/common.txt"
+  output:
+    format: json
+    type: fuzz_results
+  timeout: 3600
+
+capabilities:
+  - directory_fuzzing
+  - parameter_fuzzing
+  - header_fuzzing
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

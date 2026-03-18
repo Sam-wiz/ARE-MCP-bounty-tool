@@ -1,0 +1,40 @@
+# CrackMapExec - Network pentesting
+name: crackmapexec
+category: network.ad
+version: "5.4.0"
+description: Swiss army knife for pentesting Windows/Active Directory
+
+install:
+  method: pip
+  command: pip3 install crackmapexec
+  verify: crackmapexec --version
+
+execute:
+  command: crackmapexec {protocol} {target} -u {user} -p {password}
+  input:
+    protocol:
+      type: string
+      required: true
+    target:
+      type: string
+      required: true
+    user:
+      type: string
+      required: true
+    password:
+      type: string
+      required: true
+  output:
+    format: text
+    type: ad_results
+  timeout: 1800
+
+capabilities:
+  - smb_enumeration
+  - winrm_execution
+  - mssql_access
+
+resources:
+  cpu: low
+  memory: low
+  network: high

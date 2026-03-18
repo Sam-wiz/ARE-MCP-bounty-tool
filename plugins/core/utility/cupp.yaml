@@ -1,0 +1,27 @@
+# Cupp - Password profiler
+name: cupp
+category: utility.wordlist
+version: "3.3.0"
+description: Common User Passwords Profiler
+
+install:
+  method: git
+  command: git clone https://github.com/Mebus/cupp.git
+  verify: python3 cupp.py -h
+
+execute:
+  command: python3 cupp.py -i
+  input: {}
+  output:
+    format: lines
+    type: wordlist
+  timeout: 300
+
+capabilities:
+  - password_profiling
+  - social_engineering
+
+resources:
+  cpu: low
+  memory: low
+  network: none

@@ -1,0 +1,33 @@
+# Subfinder silent
+name: subfinder_silent
+category: recon.subdomains
+version: "2.6.3"
+description: Subfinder passive mode only
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+  verify: subfinder -version
+
+execute:
+  command: subfinder -d {domain} -silent -all -o {output_file}
+  input:
+    domain:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/subfinder_silent.txt"
+  output:
+    format: lines
+    type: subdomains
+  timeout: 600
+
+capabilities:
+  - passive_subdomain
+  - silent_mode
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

@@ -1,0 +1,60 @@
+# Dalfox - XSS Scanner
+name: dalfox
+category: testing.xss
+version: "2.9.0"
+description: Parameter analysis and XSS scanning tool
+
+install:
+  method: go
+  command: go install github.com/hahwul/dalfox/v2@latest
+  verify: dalfox version
+
+execute:
+  command: dalfox url {url} --silence --format json {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+      description: Target URL with parameters
+    mode:
+      type: string
+      required: false
+      default: ""
+      description: Scan mode (pipe for piping URLs)
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: json
+    type: xss_findings
+  timeout: 600
+
+parse:
+  type: json
+  schema:
+    type:
+      path: "type"
+    inject_type:
+      path: "inject_type"
+    poc:
+      path: "poc"
+    method:
+      path: "method"
+    param:
+      path: "param"
+    payload:
+      path: "payload"
+
+capabilities:
+  - xss_detection
+  - reflected_xss
+  - stored_xss
+  - dom_xss
+  - parameter_analysis
+
+resources:
+  cpu: medium
+  memory: low
+  network: moderate

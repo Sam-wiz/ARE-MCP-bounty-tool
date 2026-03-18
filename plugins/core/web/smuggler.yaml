@@ -1,0 +1,31 @@
+# Smuggler - HTTP Request Smuggling
+name: smuggler
+category: testing.smuggling
+version: "1.0.0"
+description: HTTP Request Smuggling detection
+
+install:
+  method: git
+  command: git clone https://github.com/defparam/smuggler.git
+  verify: python3 smuggler.py -h
+
+execute:
+  command: python3 smuggler.py -u {url}
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: text
+    type: smuggling_findings
+  timeout: 600
+
+capabilities:
+  - http_smuggling
+  - cl_te_detection
+  - te_cl_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

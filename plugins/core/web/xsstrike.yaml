@@ -1,0 +1,34 @@
+# XSStrike
+name: xsstrike
+category: testing.xss
+version: "3.1.5"
+description: Most advanced XSS scanner
+
+install:
+  method: pip
+  command: pip3 install XSStrike
+  verify: xsstrike -h
+
+execute:
+  command: xsstrike -u "{url}" --crawl --json -o {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/xsstrike.json"
+  output:
+    format: json
+    type: xss_findings
+  timeout: 1800
+
+capabilities:
+  - xss_detection
+  - fuzzing
+  - payload_generation
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

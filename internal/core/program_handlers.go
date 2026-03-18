@@ -1,0 +1,190 @@
+package core
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/samrudh/hack-ai-v2/internal/types"
+)
+
+// ============================================================================
+// BOUNTY PROGRAM MANAGEMENT HANDLERS
+// ============================================================================
+
+func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
+	slug, _ := args["slug"].(string)
+	if slug == "" {
+		return errorResult("slug is required (e.g., 'playtika', 'hackerone-xyz')"), nil
+	}
+
+	name, _ := args["name"].(string)
+	if name == "" {
+		name = slug
+	}
+
+	platform, _ := args["platform"].(string)
+	if platform == "" {
+		platform = "independent"
+	}
+
+	url, _ := args["url"].(string)
+
+	// Set active program
+	e.mu.Lock()
+	e.program = slug
+	e.mu.Unlock()
+
+	// Build program object
+	program := &types.BountyProgram{
+		ID:         slug,
+		Slug:       slug,
+		Name:       name,
+		Platform:   platform,
+		URL:        url,
+		Status:     "active",
+		CreatedAt:  time.Now(),
+		LastActive: time.Now(),
+	}
+
+	// Parse scope if provided
+	if inScope, ok := args["in_scope"].([]interface{}); ok {
+		for _, s := range inScope {
+			if str, ok := s.(string); ok {
+				program.Scope.InScope = append(program.Scope.InScope, str)
+			}
+		}
+	}
+	if outOfScope, ok := args["out_of_scope"].([]interface{}); ok {
+		for _, s := range outOfScope {
+			if str, ok := s.(string); ok {
+				program.Scope.OutOfScope = append(program.Scope.OutOfScope, str)
+			}
+		}
+	}
+
+	// Parse payout
+	if min, ok := args["payout_min"].(float64); ok {
+		program.PayoutMin = int(min)
+	}
+	if max, ok := args["payout_max"].(float64); ok {
+		program.PayoutMax = int(max)
+	}
+
+	// Parse notes
+	if notes, ok := args["notes"].(string); ok {
+		program.Notes = notes
+	}
+
+	// Persist to MongoDB
+	if e.config.MongoDB != nil {
+		// Check if program already exists
+		existing, _ := e.config.MongoDB.GetProgram(ctx, slug)
+		if existing != nil {
+			// Update last_active only, keep existing data
+			existing.LastActive = time.Now()
+			existing.Status = "active"
+			if name != slug {
+				existing.Name = name
+			}
+			if url != "" {
+				existing.URL = url
+			}
+			e.config.MongoDB.SaveProgram(ctx, existing)
+			return successResult(fmt.Sprintf("🎯 Switched to existing program: %s\n- Platform: %s\n- Status: active\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, slug)), nil
+		}
+
+		if err := e.config.MongoDB.SaveProgram(ctx, program); err != nil {
+			return errorResult(fmt.Sprintf("Failed to save program: %v", err)), nil
+		}
+	}
+
+	return successResult(fmt.Sprintf(`🎯 Bounty program created and set:
+- Slug: %s
+- Name: %s
+- Platform: %s
+- Status: active
+- Saved to MongoDB: ✅
+
+All findings, sessions, and tool runs will now be tagged with program: "%s"
+Use set_target to set the target domain.`, slug, name, platform, slug)), nil
+}
+
+func (e *Engine) handleListPrograms(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
+	if e.config.MongoDB == nil {
+		return errorResult("MongoDB not configured"), nil
+	}
+
+	programs, err := e.config.MongoDB.ListPrograms(ctx)
+	if err != nil {
+		return errorResult(fmt.Sprintf("Failed to list programs: %v", err)), nil
+	}
+
+	if len(programs) == 0 {
+		return successResult("No bounty programs registered yet. Use set_program to create one."), nil
+	}
+
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("📋 Bounty Programs (%d total)\n\n", len(programs)))
+
+	for _, p := range programs {
+		active := ""
+		if p.Slug == e.GetProgram() {
+			active = " ← ACTIVE"
+		}
+		result.WriteString(fmt.Sprintf("🎯 %s (%s)%s\n", p.Name, p.Slug, active))
+		result.WriteString(fmt.Sprintf("   Platform: %s | Status: %s\n", p.Platform, p.Status))
+		if p.URL != "" {
+			result.WriteString(fmt.Sprintf("   URL: %s\n", p.URL))
+		}
+		if p.PayoutMax > 0 {
+			result.WriteString(fmt.Sprintf("   Payout: $%d - $%d\n", p.PayoutMin, p.PayoutMax))
+		}
+		result.WriteString(fmt.Sprintf("   Last active: %s\n\n", p.LastActive.Format("2006-01-02 15:04")))
+	}
+
+	return successResult(result.String()), nil
+}
+
+func (e *Engine) handleProgramStats(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
+	if e.config.MongoDB == nil {
+		return errorResult("MongoDB not configured"), nil
+	}
+
+	program, _ := args["program"].(string)
+	if program == "" {
+		program = e.GetProgram()
+	}
+	if program == "" {
+		return errorResult("No active program. Use set_program first or pass program slug."), nil
+	}
+
+	stats, err := e.config.MongoDB.GetProgramStats(ctx, program)
+	if err != nil {
+		return errorResult(fmt.Sprintf("Failed to get stats: %v", err)), nil
+	}
+
+	data, _ := json.MarshalIndent(stats, "", "  ")
+
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("📊 Program Stats: %s\n\n", program))
+	result.WriteString(string(data))
+
+	// Also get recent findings
+	findings, _ := e.config.MongoDB.GetFindingsByProgram(ctx, program)
+	if len(findings) > 0 {
+		result.WriteString(fmt.Sprintf("\n\n--- Recent Findings (%d total) ---\n", len(findings)))
+		limit := 10
+		if len(findings) < limit {
+			limit = len(findings)
+		}
+		for i := 0; i < limit; i++ {
+			f := findings[i]
+			result.WriteString(fmt.Sprintf("  [%s] %s — %s (%s)\n", f.Severity, f.Title, f.VulnType, f.State))
+		}
+	}
+
+	return successResult(result.String()), nil
+}

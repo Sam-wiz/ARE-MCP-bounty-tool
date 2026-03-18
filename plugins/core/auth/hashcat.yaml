@@ -1,0 +1,41 @@
+# Hashcat
+name: hashcat
+category: testing.cracking
+version: "6.2.6"
+description: World's fastest password recovery utility
+
+install:
+  method: apt
+  command: apt-get install -y hashcat
+  verify: hashcat --version
+
+execute:
+  command: hashcat -m {mode} -a 0 {hash_file} {wordlist} -o {output_file}
+  input:
+    hash_file:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      required: true
+    mode:
+      type: number
+      default: 0
+      description: "Hash mode (0=MD5, 100=SHA1, 1000=NTLM, etc.)"
+    output_file:
+      type: string
+      default: "/tmp/hashcat.txt"
+  output:
+    format: text
+    type: cracked_hashes
+  timeout: 86400
+
+capabilities:
+  - hash_cracking
+  - gpu_acceleration
+  - rule_based_attacks
+
+resources:
+  cpu: high
+  memory: high
+  network: none

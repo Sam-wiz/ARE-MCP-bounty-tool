@@ -1,0 +1,34 @@
+# Mitmproxy - MITM Proxy
+name: mitmproxy
+category: proxy
+version: "10.1.0"
+description: Interactive TLS-capable intercepting proxy
+
+install:
+  method: pip
+  command: pip3 install mitmproxy
+  verify: mitmproxy --version
+
+execute:
+  command: mitmdump -w {output_file} -p {port}
+  input:
+    output_file:
+      type: string
+      default: "/tmp/mitmproxy.flow"
+    port:
+      type: number
+      default: 8080
+  output:
+    format: binary
+    type: traffic_capture
+  timeout: 86400
+
+capabilities:
+  - traffic_interception
+  - request_modification
+  - ssl_interception
+
+resources:
+  cpu: low
+  memory: medium
+  network: moderate

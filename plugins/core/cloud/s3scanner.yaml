@@ -1,0 +1,34 @@
+# S3Scanner
+name: s3scanner
+category: cloud.aws
+version: "3.0.0"
+description: Scan for open AWS S3 buckets
+
+install:
+  method: pip
+  command: pip3 install s3scanner
+  verify: s3scanner --help
+
+execute:
+  command: s3scanner scan --buckets {bucket_file} --out-file {output_file}
+  input:
+    bucket_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/s3scanner.txt"
+  output:
+    format: text
+    type: buckets
+  timeout: 1800
+
+capabilities:
+  - s3_enumeration
+  - bucket_permissions
+  - public_bucket_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

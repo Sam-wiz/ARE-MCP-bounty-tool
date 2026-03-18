@@ -1,0 +1,33 @@
+# Hakrawler
+name: hakrawler
+category: recon.crawl
+version: "2.1.0"
+description: Simple, fast web crawler for gathering URLs and JS file locations
+
+install:
+  method: go
+  command: go install github.com/hakluke/hakrawler@latest
+  verify: which hakrawler
+
+execute:
+  command: echo {url} | hakrawler -subs -d {depth} -json
+  input:
+    url:
+      type: string
+      required: true
+    depth:
+      type: number
+      default: 2
+  output:
+    format: json
+    type: urls
+  timeout: 900
+
+capabilities:
+  - crawling
+  - subdomain_urls
+
+resources:
+  cpu: low
+  memory: low
+  network: high

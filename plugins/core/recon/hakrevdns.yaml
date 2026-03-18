@@ -1,0 +1,30 @@
+# Hakrevdns - Reverse DNS
+name: hakrevdns
+category: recon.dns
+version: "1.0.0"
+description: Reverse DNS resolver
+
+install:
+  method: go
+  command: go install github.com/hakluke/hakrevdns@latest
+  verify: which hakrevdns
+
+execute:
+  command: cat {input_file} | hakrevdns -d
+  input:
+    input_file:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: dns_reverse
+  timeout: 1800
+
+capabilities:
+  - reverse_dns
+  - ptr_records
+
+resources:
+  cpu: low
+  memory: low
+  network: high

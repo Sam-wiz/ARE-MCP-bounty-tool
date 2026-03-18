@@ -1,0 +1,30 @@
+# Mapcidr - CIDR manipulation
+name: mapcidr
+category: utility
+version: "1.1.16"
+description: Perform multiple operations for a given CIDR
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/mapcidr/cmd/mapcidr@latest
+  verify: mapcidr -version
+
+execute:
+  command: echo {cidr} | mapcidr -silent
+  input:
+    cidr:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: ips
+  timeout: 60
+
+capabilities:
+  - cidr_expansion
+  - ip_enumeration
+
+resources:
+  cpu: low
+  memory: low
+  network: none

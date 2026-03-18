@@ -1,0 +1,33 @@
+# RustScan
+name: rustscan
+category: network.scanning
+version: "2.1.1"
+description: The Modern Port Scanner
+
+install:
+  method: cargo
+  command: cargo install rustscan
+  verify: rustscan --version
+
+execute:
+  command: rustscan -a {target} --ulimit 5000 -- -sV -oN {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/rustscan.txt"
+  output:
+    format: text
+    type: port_scan
+  timeout: 1800
+
+capabilities:
+  - fast_port_scanning
+  - nmap_integration
+
+resources:
+  cpu: high
+  memory: low
+  network: very_high

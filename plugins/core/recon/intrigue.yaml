@@ -1,0 +1,31 @@
+# Intrigue Core - Discovery framework
+name: intrigue
+category: recon.framework
+version: "2.0.0"
+description: Discovery framework for attack surface
+
+install:
+  method: docker
+  command: docker pull intrigueio/intrigue-core
+  verify: docker images | grep intrigue
+
+execute:
+  command: docker run intrigueio/intrigue-core scan {target}
+  input:
+    target:
+      type: string
+      required: true
+  output:
+    format: json
+    type: discovery_results
+  timeout: 7200
+
+capabilities:
+  - discovery
+  - attack_surface
+  - automation
+
+resources:
+  cpu: high
+  memory: high
+  network: very_high

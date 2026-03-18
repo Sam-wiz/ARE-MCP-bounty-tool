@@ -1,0 +1,31 @@
+# Recon-ng - Web reconnaissance framework
+name: reconng
+category: recon.framework
+version: "5.1.2"
+description: Web reconnaissance framework
+
+install:
+  method: pip
+  command: pip3 install recon-ng
+  verify: recon-ng --version
+
+execute:
+  command: recon-ng -r {script_file}
+  input:
+    script_file:
+      type: string
+      required: true
+  output:
+    format: text
+    type: recon_results
+  timeout: 3600
+
+capabilities:
+  - reconnaissance
+  - module_based
+  - data_storage
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

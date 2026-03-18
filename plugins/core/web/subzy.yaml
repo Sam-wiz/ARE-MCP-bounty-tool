@@ -1,0 +1,34 @@
+# Subzy - Subdomain Takeover
+name: subzy
+category: testing.takeover
+version: "1.1.0"
+description: Subdomain takeover vulnerability checker
+
+install:
+  method: go
+  command: go install github.com/PentestPad/subzy@latest
+  verify: subzy --help
+
+execute:
+  command: subzy run --targets {input_file} --output {output_file} --vuln
+  input:
+    input_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/subzy.txt"
+  output:
+    format: text
+    type: takeover_findings
+  timeout: 1800
+
+capabilities:
+  - subdomain_takeover
+  - dangling_records
+  - service_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: high

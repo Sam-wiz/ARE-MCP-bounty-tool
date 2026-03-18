@@ -1,0 +1,43 @@
+# Corsy - CORS Misconfiguration
+name: corsy
+category: testing.cors
+version: "1.0.0"
+description: CORS Misconfiguration Scanner
+
+install:
+  method: git
+  command: git clone https://github.com/s0md3v/Corsy.git && pip install -r requirements.txt
+  verify: which python3
+
+execute:
+  command: python3 -m corsy -u {url} -t {threads}
+  input:
+    url:
+      type: string
+      required: true
+      description: Target URL to test for CORS misconfigurations
+    threads:
+      type: number
+      default: "10"
+      description: Number of threads
+  output:
+    format: text
+    type: cors_findings
+  timeout: 600
+
+parse:
+  type: line-per-result
+  schema:
+    url:
+      regex: "^(.+)$"
+      group: 1
+
+capabilities:
+  - cors_misconfiguration
+  - origin_testing
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate
+

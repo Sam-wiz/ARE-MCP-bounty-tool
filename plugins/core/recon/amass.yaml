@@ -1,0 +1,51 @@
+# Amass - Subdomain Enumeration
+name: amass
+category: recon.subdomain
+version: "4.2.0"
+description: In-depth Attack Surface Mapping and Asset Discovery
+
+install:
+  method: go
+  command: go install -v github.com/owasp-amass/amass/v4/...@master
+  verify: amass -version
+
+execute:
+  command: amass enum -d {domain} -passive -json {output_file} {extra_args}
+  input:
+    domain:
+      type: string
+      required: true
+      description: Target domain
+    output_file:
+      type: string
+      required: false
+      default: "/tmp/amass_output.json"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: json
+    type: subdomains
+  timeout: 1800
+
+parse:
+  type: json
+  schema:
+    name:
+      path: "name"
+    domain:
+      path: "domain"
+    sources:
+      path: "sources"
+
+capabilities:
+  - subdomain_enumeration
+  - passive_recon
+  - active_recon
+  - dns_analysis
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

@@ -1,0 +1,33 @@
+# Wafw00f - WAF detection
+name: wafw00f
+category: recon.waf
+version: "2.2.0"
+description: Web Application Firewall detection
+
+install:
+  method: pip
+  command: pip3 install wafw00f
+  verify: wafw00f -h
+
+execute:
+  command: wafw00f {url} -o {output_file}
+  input:
+    url:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/wafw00f.json"
+  output:
+    format: json
+    type: waf_info
+  timeout: 300
+
+capabilities:
+  - waf_detection
+  - fingerprinting
+
+resources:
+  cpu: low
+  memory: low
+  network: low

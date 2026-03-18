@@ -1,0 +1,36 @@
+# OpenRedireX - Open Redirect Scanner
+name: openredirex
+category: testing.redirect
+version: "1.0.0"
+description: Open redirect vulnerability scanner
+
+install:
+  method: pip
+  command: pip3 install openredirex
+  verify: openredirex -h
+
+execute:
+  command: openredirex -l {input_file} -p {payloads} -o {output_file}
+  input:
+    input_file:
+      type: string
+      required: true
+    payloads:
+      type: string
+      default: "~/.openredirex/payloads.txt"
+    output_file:
+      type: string
+      default: "/tmp/openredirex.txt"
+  output:
+    format: lines
+    type: redirect_findings
+  timeout: 1200
+
+capabilities:
+  - open_redirect
+  - payload_testing
+
+resources:
+  cpu: low
+  memory: low
+  network: high

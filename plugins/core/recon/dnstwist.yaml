@@ -1,0 +1,31 @@
+# DNSTwist - Domain permutation
+name: dnstwist
+category: recon.dns
+version: "20231101"
+description: Domain name permutation engine
+
+install:
+  method: pip
+  command: pip3 install dnstwist
+  verify: dnstwist --help
+
+execute:
+  command: dnstwist --format json {domain}
+  input:
+    domain:
+      type: string
+      required: true
+  output:
+    format: json
+    type: domain_permutations
+  timeout: 600
+
+capabilities:
+  - typosquatting
+  - phishing_detection
+  - brand_monitoring
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

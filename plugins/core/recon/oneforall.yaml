@@ -1,0 +1,30 @@
+# OneForAll - Subdomain collection
+name: oneforall
+category: recon.subdomains
+version: "0.4.5"
+description: Powerful subdomain integration tool
+
+install:
+  method: git
+  command: git clone https://github.com/shmilylty/OneForAll.git && pip install -r requirements.txt
+  verify: python3 oneforall.py -h
+
+execute:
+  command: python3 oneforall.py --target {domain} run
+  input:
+    domain:
+      type: string
+      required: true
+  output:
+    format: csv
+    type: subdomains
+  timeout: 7200
+
+capabilities:
+  - subdomain_collection
+  - multi_source
+
+resources:
+  cpu: high
+  memory: high
+  network: very_high

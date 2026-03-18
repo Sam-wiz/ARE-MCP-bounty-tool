@@ -1,0 +1,52 @@
+# Katana - Next-gen Crawling Framework
+name: katana
+category: recon.crawl
+version: "1.0.0"
+description: A next-generation crawling and spidering framework
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/katana/cmd/katana@latest
+  verify: katana -version
+
+execute:
+  command: katana -u {url} -jc -json -silent -d {depth} {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+      description: Target URL to crawl
+    depth:
+      type: number
+      required: false
+      default: 3
+      description: Crawl depth
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: json
+    type: urls
+  timeout: 1800
+
+parse:
+  type: json
+  schema:
+    url:
+      path: "request.endpoint"
+    method:
+      path: "request.method"
+    source:
+      path: "request.source"
+
+capabilities:
+  - crawling
+  - js_parsing
+  - endpoint_discovery
+  - form_discovery
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

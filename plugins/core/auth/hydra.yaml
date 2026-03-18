@@ -1,0 +1,44 @@
+# Hydra
+name: hydra
+category: testing.bruteforce
+version: "9.5"
+description: Parallelized login cracker
+
+install:
+  method: apt
+  command: apt-get install -y hydra
+  verify: hydra -h
+
+execute:
+  command: hydra -L {users_file} -P {passwords_file} {target} {service} -o {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    service:
+      type: string
+      required: true
+      description: "ssh, ftp, http-post-form, etc."
+    users_file:
+      type: string
+      required: true
+    passwords_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/hydra.txt"
+  output:
+    format: text
+    type: credentials
+  timeout: 7200
+
+capabilities:
+  - password_bruteforce
+  - multi_protocol
+  - dictionary_attack
+
+resources:
+  cpu: medium
+  memory: low
+  network: high

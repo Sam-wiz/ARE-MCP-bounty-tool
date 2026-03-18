@@ -1,0 +1,53 @@
+# Trufflehog - Secret Scanning
+name: trufflehog
+category: secrets
+version: "3.0.0"
+description: Find credentials and secrets in git repos
+
+install:
+  method: go
+  command: go install github.com/trufflesecurity/trufflehog/v3@latest
+  verify: trufflehog --version
+
+execute:
+  command: trufflehog {source_type} {target} --json {extra_args}
+  input:
+    source_type:
+      type: string
+      required: true
+      description: "Source type: git, github, s3, filesystem"
+    target:
+      type: string
+      required: true
+      description: Target to scan (repo URL, path, etc.)
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: json
+    type: secrets
+  timeout: 3600
+
+parse:
+  type: json
+  schema:
+    detector_type:
+      path: "DetectorType"
+    verified:
+      path: "Verified"
+    raw:
+      path: "Raw"
+    source:
+      path: "SourceMetadata"
+
+capabilities:
+  - secret_detection
+  - git_scanning
+  - s3_scanning
+  - credential_finding
+
+resources:
+  cpu: medium
+  memory: medium
+  network: moderate

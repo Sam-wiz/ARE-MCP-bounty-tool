@@ -1,0 +1,31 @@
+# Wappalyzer - Technology detection
+name: wappalyzer
+category: recon.fingerprint
+version: "6.10.0"
+description: Identify technologies on websites
+
+install:
+  method: npm
+  command: npm install -g wappalyzer
+  verify: wappalyzer --version
+
+execute:
+  command: wappalyzer {url} --pretty
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: json
+    type: tech_stack
+  timeout: 300
+
+capabilities:
+  - technology_detection
+  - framework_detection
+  - library_detection
+
+resources:
+  cpu: low
+  memory: medium
+  network: low

@@ -1,0 +1,33 @@
+# Postman to Swagger
+name: postman2swagger
+category: utility.api
+version: "1.0.0"
+description: Convert Postman collections to OpenAPI
+
+install:
+  method: npm
+  command: npm install -g postman-to-openapi
+  verify: p2o --help
+
+execute:
+  command: p2o {collection_file} -f {output_file}
+  input:
+    collection_file:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/openapi.yaml"
+  output:
+    format: yaml
+    type: openapi_spec
+  timeout: 60
+
+capabilities:
+  - collection_conversion
+  - api_documentation
+
+resources:
+  cpu: low
+  memory: low
+  network: none

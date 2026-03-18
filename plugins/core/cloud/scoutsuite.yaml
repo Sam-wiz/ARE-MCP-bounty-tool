@@ -1,0 +1,41 @@
+# ScoutSuite - Multi-Cloud Security Auditing
+name: scoutsuite
+category: cloud.multi
+version: "5.14.0"
+description: Multi-Cloud Security Auditing Tool
+
+install:
+  method: pip
+  command: pip3 install scoutsuite
+  verify: scout --help
+
+execute:
+  command: scout {provider} --report-dir {output_dir} --no-browser {extra_args}
+  input:
+    provider:
+      type: string
+      required: true
+      description: Cloud provider (aws, gcp, azure)
+    output_dir:
+      type: string
+      required: false
+      default: "/tmp/scoutsuite"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: html
+    type: cloud_report
+  timeout: 7200
+
+capabilities:
+  - aws_assessment
+  - gcp_assessment
+  - azure_assessment
+  - compliance_check
+
+resources:
+  cpu: low
+  memory: medium
+  network: high

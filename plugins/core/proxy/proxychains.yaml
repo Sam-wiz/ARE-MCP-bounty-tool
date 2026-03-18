@@ -1,0 +1,34 @@
+# proxychains-ng — Route any tool through proxy chains
+name: proxychains4
+category: proxy
+version: "4.16"
+description: Route any CLI tool through SOCKS/HTTP proxy chains (Tor, VPN, etc.)
+
+install:
+  method: system
+  command: brew install proxychains-ng
+  verify: proxychains4 -h 2>&1 | head -1
+
+execute:
+  command: proxychains4 {tool_command}
+  input:
+    tool_command:
+      type: string
+      required: true
+      description: "The full command to route through the proxy chain"
+  output:
+    format: text
+    type: proxied_output
+  timeout: 3600
+
+capabilities:
+  - proxy_chaining
+  - socks5_support
+  - http_proxy
+  - dns_proxy
+  - tor_integration
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

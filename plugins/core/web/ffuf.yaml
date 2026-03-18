@@ -1,0 +1,59 @@
+# ffuf - Fast Web Fuzzer
+name: ffuf
+category: testing.fuzzing
+version: "2.1.0"
+description: Fast web fuzzer written in Go
+
+install:
+  method: go
+  command: go install github.com/ffuf/ffuf/v2@latest
+  verify: ffuf -V
+
+execute:
+  command: ffuf -u {url} -w {wordlist} -mc all -fc 404 -json -o {output_file} {extra_args}
+  input:
+    url:
+      type: string
+      required: true
+      description: Target URL with FUZZ keyword
+    wordlist:
+      type: string
+      required: true
+      description: Path to wordlist
+    output_file:
+      type: string
+      required: false
+      default: "/tmp/ffuf_output.json"
+    extra_args:
+      type: string
+      required: false
+      default: "-t 50"
+  output:
+    format: json
+    type: fuzz_results
+  timeout: 3600
+
+parse:
+  type: json
+  schema:
+    url:
+      path: "url"
+    status:
+      path: "status"
+    length:
+      path: "length"
+    words:
+      path: "words"
+    input:
+      path: "input.FUZZ"
+
+capabilities:
+  - directory_fuzzing
+  - parameter_fuzzing
+  - vhost_discovery
+  - content_discovery
+
+resources:
+  cpu: high
+  memory: low
+  network: high

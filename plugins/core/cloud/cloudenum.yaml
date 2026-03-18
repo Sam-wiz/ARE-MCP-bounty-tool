@@ -1,0 +1,34 @@
+# CloudEnum
+name: cloudenum
+category: cloud.multi
+version: "0.7.0"
+description: Multi-cloud OSINT tool
+
+install:
+  method: git
+  command: git clone https://github.com/initstring/cloud_enum.git && pip install -r requirements.txt
+  verify: python3 cloud_enum.py -h
+
+execute:
+  command: python3 cloud_enum.py -k {keyword} -l {output_file}
+  input:
+    keyword:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/cloudenum.txt"
+  output:
+    format: text
+    type: cloud_resources
+  timeout: 3600
+
+capabilities:
+  - aws_enumeration
+  - azure_enumeration
+  - gcp_enumeration
+
+resources:
+  cpu: low
+  memory: low
+  network: high

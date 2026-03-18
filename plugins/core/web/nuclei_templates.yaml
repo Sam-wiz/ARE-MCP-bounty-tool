@@ -1,0 +1,36 @@
+# Nuclei Templates - Custom
+name: nuclei_templates
+category: testing.templates
+version: "9.6.0"
+description: Nuclei template collection
+
+install:
+  method: git
+  command: git clone https://github.com/projectdiscovery/nuclei-templates.git ~/.nuclei-templates
+  verify: ls ~/.nuclei-templates
+
+execute:
+  command: nuclei -u {target} -t {template_path} -json -o {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    template_path:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/nuclei_custom.json"
+  output:
+    format: json
+    type: scan_results
+  timeout: 3600
+
+capabilities:
+  - custom_templates
+  - vulnerability_scanning
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

@@ -1,0 +1,31 @@
+# LFISuite - LFI Scanner
+name: lfisuite
+category: testing.lfi
+version: "1.13"
+description: Totally Automatic LFI Exploiter
+
+install:
+  method: git
+  command: git clone https://github.com/D35m0nd142/LFISuite.git
+  verify: python lfisuite.py -h
+
+execute:
+  command: python lfisuite.py -u "{url}"
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: text
+    type: lfi_findings
+  timeout: 1200
+
+capabilities:
+  - lfi_detection
+  - file_inclusion
+  - rce_via_lfi
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

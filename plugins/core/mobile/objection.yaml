@@ -1,0 +1,31 @@
+# Objection - Mobile Runtime Exploration
+name: objection
+category: mobile.dynamic
+version: "1.11.0"
+description: Runtime mobile exploration powered by Frida
+
+install:
+  method: pip
+  command: pip3 install objection
+  verify: objection --help
+
+execute:
+  command: objection -g {package} explore
+  input:
+    package:
+      type: string
+      required: true
+  output:
+    format: text
+    type: mobile_findings
+  timeout: 3600
+
+capabilities:
+  - ssl_pinning_bypass
+  - root_detection_bypass
+  - runtime_exploration
+
+resources:
+  cpu: low
+  memory: medium
+  network: none

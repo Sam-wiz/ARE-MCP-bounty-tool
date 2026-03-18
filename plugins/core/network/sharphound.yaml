@@ -1,0 +1,31 @@
+# SharpHound - BloodHound collector
+name: sharphound
+category: network.ad
+version: "1.1.1"
+description: BloodHound data collector
+
+install:
+  method: git
+  command: git clone https://github.com/BloodHoundAD/SharpHound.git
+  verify: ls SharpHound*
+
+execute:
+  command: ./SharpHound.exe --collectionmethod All --outputdirectory {output_dir}
+  input:
+    output_dir:
+      type: string
+      default: "/tmp/sharphound"
+  output:
+    format: zip
+    type: ad_data
+  timeout: 3600
+
+capabilities:
+  - ad_collection
+  - session_data
+  - acl_data
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

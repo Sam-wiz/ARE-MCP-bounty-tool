@@ -1,0 +1,33 @@
+# Hakcheckurl - Check URLs
+name: hakcheckurl
+category: recon.probing
+version: "1.0.0"
+description: Check URL status codes
+
+install:
+  method: go
+  command: go install github.com/hakluke/hakcheckurl@latest
+  verify: which hakcheckurl
+
+execute:
+  command: cat {input_file} | hakcheckurl -t {threads}
+  input:
+    input_file:
+      type: string
+      required: true
+    threads:
+      type: number
+      default: 10
+  output:
+    format: lines
+    type: url_status
+  timeout: 1800
+
+capabilities:
+  - url_checking
+  - status_codes
+
+resources:
+  cpu: low
+  memory: low
+  network: high

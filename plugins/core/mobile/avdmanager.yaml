@@ -1,0 +1,35 @@
+# AVD Manager - Android Virtual Device manager
+name: avdmanager
+category: mobile.emulator
+version: "latest"
+description: Create and manage Android Virtual Devices for emulator testing
+
+install:
+  method: sdk
+  command: sdkmanager --install "cmdline-tools;latest"
+  verify: avdmanager list avd
+
+execute:
+  command: avdmanager {action} {flags}
+  input:
+    action:
+      type: string
+      required: true
+      enum: [create, delete, list, move]
+    flags:
+      type: string
+      default: ""
+  output:
+    format: text
+    type: avd_result
+  timeout: 300
+
+capabilities:
+  - avd_creation
+  - avd_management
+  - device_configuration
+
+resources:
+  cpu: low
+  memory: low
+  network: none

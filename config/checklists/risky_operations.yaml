@@ -1,0 +1,112 @@
+# Risky Operations Checklists
+# These must be verified before executing potentially dangerous operations
+
+operations:
+  # Data exfiltration beyond PoC
+  - name: "data_exfiltration"
+    description: "Extracting actual user data beyond minimal PoC"
+    requires:
+      explicit_permission: true
+      scope_confirmation: true
+    opsec_layers:
+      - proxy_chain: true
+      - mac_spoof: true
+    checklist:
+      - "Is this within program scope?"
+      - "Is minimal data extraction sufficient for PoC?"
+      - "OPSEC: Proxy chain active?"
+      - "OPSEC: MAC address spoofed?"
+      - "OPSEC: VPN/Tor active?"
+
+  # Aggressive scanning that may trigger alerts
+  - name: "aggressive_scanning"
+    description: "High-volume scanning that may trigger WAF/IDS"
+    requires:
+      explicit_permission: true
+    opsec_layers:
+      - proxy_chain: true
+      - ip_rotation: true
+    checklist:
+      - "Is aggressive scanning allowed by program?"
+      - "OPSEC: Proxy chain active?"
+      - "OPSEC: IP rotation configured?"
+      - "Are we prepared for IP blocks?"
+
+  # Exploitation beyond detection
+  - name: "exploitation"
+    description: "Actually exploiting a vulnerability beyond PoC"
+    requires:
+      explicit_permission: true
+      finding_verified: true
+    opsec_layers:
+      - full_protection: true
+    checklist:
+      - "Is exploitation allowed by program?"
+      - "Is this finding already verified?"
+      - "OPSEC: Full protection stack active?"
+      - "Do we have rollback/cleanup plan?"
+      - "Is this minimally invasive?"
+
+  # Reverse shell / command execution
+  - name: "remote_code_execution"
+    description: "Executing commands or spawning shells on target"
+    requires:
+      explicit_permission: true
+    opsec_layers:
+      - full_protection: true
+      - clean_environment: true
+    checklist:
+      - "Is RCE testing explicitly allowed?"
+      - "OPSEC: All protection layers active?"
+      - "OPSEC: Using clean environment?"
+      - "OPSEC: No identifying information in payloads?"
+      - "Have we documented everything?"
+      - "Can we prove this was authorized?"
+
+  # Cloud resource access
+  - name: "cloud_access"
+    description: "Accessing cloud resources (S3, databases, etc.)"
+    requires:
+      explicit_permission: true
+    opsec_layers:
+      - proxy_chain: true
+    checklist:
+      - "Are these cloud resources in scope?"
+      - "OPSEC: Proxy chain active?"
+      - "Are we accessing only what's needed for PoC?"
+      - "Will we be accessing any PII?"
+
+# OPSEC layer definitions
+opsec_layers:
+  proxy_chain:
+    description: "Route traffic through proxy chain"
+    setup_command: "opsec_setup --proxy-chain"
+    verify_command: "opsec_verify --checks ip"
+
+  mac_spoof:
+    description: "Spoof MAC address"
+    setup_command: "sudo spoof-mac randomize {interface}"
+    verify_command: "ifconfig {interface} | grep ether"
+
+  ip_rotation:
+    description: "Rotate IPs during testing"
+    setup_command: "opsec_setup --ip-rotation"
+    verify_command: "curl ifconfig.me"
+
+  full_protection:
+    description: "All OPSEC layers active"
+    includes:
+      - proxy_chain
+      - mac_spoof
+      - tor
+      - vpn
+    setup_command: "opsec_setup --full"
+    verify_command: "opsec_verify --all"
+
+  clean_environment:
+    description: "Fresh environment with no traces"
+    setup_command: "opsec_setup --clean-env"
+    features:
+      - temp_directories
+      - no_history
+      - cleared_browser

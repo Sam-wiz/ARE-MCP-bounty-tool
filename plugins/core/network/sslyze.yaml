@@ -1,0 +1,34 @@
+# SSLyze - SSL/TLS analysis
+name: sslyze
+category: testing.tls
+version: "5.2.0"
+description: Fast SSL/TLS scanner
+
+install:
+  method: pip
+  command: pip3 install sslyze
+  verify: sslyze --version
+
+execute:
+  command: sslyze --json_out {output_file} {target}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/sslyze.json"
+  output:
+    format: json
+    type: ssl_findings
+  timeout: 600
+
+capabilities:
+  - ssl_analysis
+  - heartbleed_check
+  - robot_check
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate

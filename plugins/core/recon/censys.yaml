@@ -1,0 +1,31 @@
+# Censys CLI
+name: censys
+category: recon.osint
+version: "2.2.0"
+description: Censys search engine CLI
+
+install:
+  method: pip
+  command: pip3 install censys
+  verify: censys --version
+
+execute:
+  command: censys search "{query}" --index-type hosts
+  input:
+    query:
+      type: string
+      required: true
+  output:
+    format: json
+    type: censys_results
+  timeout: 300
+
+capabilities:
+  - internet_scanning
+  - certificate_search
+  - host_search
+
+resources:
+  cpu: low
+  memory: low
+  network: low

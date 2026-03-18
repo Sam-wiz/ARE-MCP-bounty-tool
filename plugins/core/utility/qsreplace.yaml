@@ -1,0 +1,33 @@
+# Qsreplace - Query string replace
+name: qsreplace
+category: utility
+version: "0.0.3"
+description: Replace query string values in URLs
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/qsreplace@latest
+  verify: which qsreplace
+
+execute:
+  command: cat {input_file} | qsreplace "{payload}"
+  input:
+    input_file:
+      type: string
+      required: true
+    payload:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: modified_urls
+  timeout: 60
+
+capabilities:
+  - param_replacement
+  - payload_injection
+
+resources:
+  cpu: low
+  memory: low
+  network: none

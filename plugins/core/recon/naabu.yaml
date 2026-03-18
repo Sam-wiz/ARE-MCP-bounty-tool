@@ -1,0 +1,37 @@
+# Naabu
+name: naabu
+category: recon.ports
+version: "2.1.6"
+description: Fast port scanner written in Go
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
+  verify: naabu -version
+
+execute:
+  command: naabu -host {target} -p {ports} -json -o {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    ports:
+      type: string
+      default: "top-1000"
+    output_file:
+      type: string
+      default: "/tmp/naabu.json"
+  output:
+    format: json
+    type: ports
+  timeout: 1800
+
+capabilities:
+  - port_scanning
+  - syn_scan
+  - connect_scan
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

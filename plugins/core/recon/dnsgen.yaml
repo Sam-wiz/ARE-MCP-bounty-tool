@@ -1,0 +1,30 @@
+# Dnsgen - DNS wordlist generation
+name: dnsgen
+category: recon.dns
+version: "1.0.4"
+description: Generate subdomain combinations
+
+install:
+  method: pip
+  command: pip3 install dnsgen
+  verify: dnsgen -h
+
+execute:
+  command: cat {input_file} | dnsgen -
+  input:
+    input_file:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: subdomains
+  timeout: 300
+
+capabilities:
+  - wordlist_generation
+  - permutation
+
+resources:
+  cpu: medium
+  memory: medium
+  network: none

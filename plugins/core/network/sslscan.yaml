@@ -1,0 +1,33 @@
+# Sslscan - SSL/TLS scanner
+name: sslscan
+category: network.tls
+version: "2.0.16"
+description: Fast SSL/TLS scanner
+
+install:
+  method: apt
+  command: apt-get install -y sslscan
+  verify: sslscan --version
+
+execute:
+  command: sslscan --xml={output_file} {target}
+  input:
+    target:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/sslscan.xml"
+  output:
+    format: xml
+    type: ssl_info
+  timeout: 300
+
+capabilities:
+  - ssl_scanning
+  - cipher_detection
+
+resources:
+  cpu: low
+  memory: low
+  network: low

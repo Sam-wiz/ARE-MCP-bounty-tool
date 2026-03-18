@@ -1,0 +1,39 @@
+# Shuffledns
+name: shuffledns
+category: recon.dns
+version: "1.0.9"
+description: Massdns wrapper for active subdomain enumeration
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
+  verify: shuffledns -version
+
+execute:
+  command: shuffledns -d {domain} -w {wordlist} -r {resolvers} -o {output_file}
+  input:
+    domain:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      default: "/usr/share/wordlists/dns.txt"
+    resolvers:
+      type: string
+      default: "/usr/share/wordlists/resolvers.txt"
+    output_file:
+      type: string
+      default: "/tmp/shuffledns.txt"
+  output:
+    format: lines
+    type: subdomains
+  timeout: 3600
+
+capabilities:
+  - active_dns_bruteforce
+  - wildcard_filtering
+
+resources:
+  cpu: high
+  memory: medium
+  network: very_high

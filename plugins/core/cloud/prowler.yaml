@@ -1,0 +1,50 @@
+# Prowler - AWS Security Assessment
+name: prowler
+category: cloud.aws
+version: "3.0.0"
+description: AWS Security Best Practices Assessment
+
+install:
+  method: pip
+  command: pip3 install prowler
+  verify: prowler -v
+
+execute:
+  command: prowler aws -M json -o {output_dir} {extra_args}
+  input:
+    output_dir:
+      type: string
+      required: false
+      default: "/tmp/prowler"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+  output:
+    format: json
+    type: cloud_findings
+  timeout: 7200
+
+parse:
+  type: json
+  schema:
+    check_id:
+      path: "CheckID"
+    severity:
+      path: "Severity"
+    status:
+      path: "Status"
+    resource:
+      path: "ResourceArn"
+
+capabilities:
+  - aws_assessment
+  - iam_analysis
+  - s3_security
+  - ec2_security
+  - compliance_check
+
+resources:
+  cpu: low
+  memory: medium
+  network: high

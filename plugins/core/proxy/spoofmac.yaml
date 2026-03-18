@@ -1,0 +1,33 @@
+# SpoofMAC — MAC address spoofing
+name: spoof-mac
+category: proxy
+version: "2.1.1"
+description: MAC address spoofing for macOS and Linux
+
+install:
+  method: pip
+  command: pip3 install SpoofMAC
+  verify: spoof-mac --help 2>&1 | head -1
+
+execute:
+  command: spoof-mac randomize {interface}
+  input:
+    interface:
+      type: string
+      default: "en0"
+      description: "Network interface to spoof (en0, eth0, wlan0, etc.)"
+  output:
+    format: text
+    type: status
+  timeout: 10
+
+capabilities:
+  - mac_spoofing
+  - mac_randomization
+  - mac_restore
+  - multi_platform
+
+resources:
+  cpu: low
+  memory: low
+  network: none

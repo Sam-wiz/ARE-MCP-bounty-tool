@@ -1,0 +1,31 @@
+# FinalRecon - All-in-one recon
+name: finalrecon
+category: recon.framework
+version: "1.1.6"
+description: All-in-one web reconnaissance
+
+install:
+  method: git
+  command: git clone https://github.com/thewhiteh4t/FinalRecon.git && pip install -r requirements.txt
+  verify: python3 finalrecon.py -h
+
+execute:
+  command: python3 finalrecon.py --url {url} --full
+  input:
+    url:
+      type: string
+      required: true
+  output:
+    format: text
+    type: recon_complete
+  timeout: 3600
+
+capabilities:
+  - full_recon
+  - headers_analysis
+  - whois_lookup
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

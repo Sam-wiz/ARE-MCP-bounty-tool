@@ -1,0 +1,36 @@
+# Altdns - Subdomain alterations
+name: altdns
+category: recon.dns
+version: "1.0.2"
+description: Generate subdomain alterations and permutations
+
+install:
+  method: pip
+  command: pip3 install py-altdns
+  verify: altdns -h
+
+execute:
+  command: altdns -i {input_file} -w {wordlist} -o {output_file}
+  input:
+    input_file:
+      type: string
+      required: true
+    wordlist:
+      type: string
+      required: true
+    output_file:
+      type: string
+      default: "/tmp/altdns.txt"
+  output:
+    format: lines
+    type: subdomains
+  timeout: 600
+
+capabilities:
+  - subdomain_alteration
+  - permutation
+
+resources:
+  cpu: medium
+  memory: medium
+  network: none

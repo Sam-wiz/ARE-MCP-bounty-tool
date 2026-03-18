@@ -1,0 +1,31 @@
+# SDK Manager - Android SDK package manager
+name: sdkmanager
+category: mobile.emulator
+version: "latest"
+description: Android SDK package manager for installing system images and tools
+
+install:
+  method: brew
+  command: brew install --cask android-commandlinetools
+  verify: sdkmanager --version
+
+execute:
+  command: sdkmanager {packages}
+  input:
+    packages:
+      type: string
+      required: true
+  output:
+    format: text
+    type: sdk_install_result
+  timeout: 1800
+
+capabilities:
+  - sdk_management
+  - system_image_install
+  - platform_install
+
+resources:
+  cpu: low
+  memory: medium
+  network: required

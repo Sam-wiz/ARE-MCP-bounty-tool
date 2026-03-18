@@ -1,0 +1,30 @@
+# Gron - Make JSON greppable
+name: gron
+category: utility
+version: "0.7.1"
+description: Make JSON greppable
+
+install:
+  method: go
+  command: go install github.com/tomnomnom/gron@latest
+  verify: which gron
+
+execute:
+  command: gron {input_file}
+  input:
+    input_file:
+      type: string
+      required: true
+  output:
+    format: lines
+    type: greppable_json
+  timeout: 60
+
+capabilities:
+  - json_parsing
+  - grep_friendly
+
+resources:
+  cpu: low
+  memory: low
+  network: none

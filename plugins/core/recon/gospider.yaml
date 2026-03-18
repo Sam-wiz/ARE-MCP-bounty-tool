@@ -1,0 +1,38 @@
+# Gospider
+name: gospider
+category: recon.crawl
+version: "1.1.6"
+description: Fast web spider written in Go
+
+install:
+  method: go
+  command: go install github.com/jaeles-project/gospider@latest
+  verify: gospider -v
+
+execute:
+  command: gospider -s {url} -c 10 -d {depth} -o {output_dir} --json
+  input:
+    url:
+      type: string
+      required: true
+    depth:
+      type: number
+      default: 3
+    output_dir:
+      type: string
+      default: "/tmp/gospider"
+  output:
+    format: json
+    type: urls
+  timeout: 1800
+
+capabilities:
+  - crawling
+  - js_parsing
+  - sitemap_parsing
+  - robots_parsing
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

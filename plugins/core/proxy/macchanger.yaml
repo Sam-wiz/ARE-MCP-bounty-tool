@@ -1,0 +1,33 @@
+# macchanger — MAC address changer (Linux only)
+name: macchanger
+category: proxy
+version: "1.7.0"
+description: GNU MAC address changer for Linux
+
+install:
+  method: system
+  command: apt-get install -y macchanger
+  verify: macchanger --version 2>&1 | head -1
+
+execute:
+  command: macchanger -r {interface}
+  input:
+    interface:
+      type: string
+      default: "eth0"
+      description: "Network interface to change MAC (eth0, wlan0, etc.)"
+  output:
+    format: text
+    type: status
+  timeout: 10
+
+capabilities:
+  - mac_spoofing
+  - mac_randomization
+  - vendor_mac_generation
+  - linux_only
+
+resources:
+  cpu: low
+  memory: low
+  network: none

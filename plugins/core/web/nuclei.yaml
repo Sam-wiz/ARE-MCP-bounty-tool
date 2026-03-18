@@ -1,0 +1,65 @@
+# Nuclei - Vulnerability Scanner
+name: nuclei
+category: scanning.vuln
+version: "3.0.0"
+description: Fast and customizable vulnerability scanner based on templates
+
+install:
+  method: go
+  command: go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+  verify: nuclei -version
+
+execute:
+  command: nuclei -l {targets_file} -severity {severity} -j -silent {extra_args}
+  input:
+    targets_file:
+      type: file
+      required: true
+      description: File with list of targets
+    severity:
+      type: string
+      required: false
+      default: "critical,high,medium"
+      description: Severity filter (critical,high,medium,low,info)
+    tags:
+      type: string
+      required: false
+      description: Template tags filter (e.g., xss,sqli,rce)
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: json
+    type: vulnerabilities
+  timeout: 3600
+
+parse:
+  type: json
+  schema:
+    template_id:
+      path: "template-id"
+    name:
+      path: "info.name"
+    severity:
+      path: "info.severity"
+    host:
+      path: "host"
+    matched_at:
+      path: "matched-at"
+    description:
+      path: "info.description"
+    reference:
+      path: "info.reference"
+
+capabilities:
+  - vulnerability_scanning
+  - template_based
+  - cve_detection
+  - misconfig_detection
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

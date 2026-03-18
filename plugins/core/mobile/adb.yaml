@@ -1,0 +1,33 @@
+# ADB - Android Debug Bridge
+name: adb
+category: mobile.emulator
+version: "latest"
+description: Android Debug Bridge for device/emulator communication
+
+install:
+  method: brew
+  command: brew install android-platform-tools
+  verify: adb --version
+
+execute:
+  command: adb {commands}
+  input:
+    commands:
+      type: string
+      required: true
+  output:
+    format: text
+    type: device_output
+  timeout: 300
+
+capabilities:
+  - device_communication
+  - app_installation
+  - logcat_capture
+  - shell_access
+  - port_forwarding
+
+resources:
+  cpu: low
+  memory: low
+  network: variable

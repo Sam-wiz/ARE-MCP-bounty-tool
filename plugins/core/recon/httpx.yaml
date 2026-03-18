@@ -1,0 +1,51 @@
+# Httpx - HTTP Probing
+name: httpx
+category: recon.http
+version: "1.3.0"
+description: Fast and multi-purpose HTTP toolkit
+
+install:
+  method: go
+  command: go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+  verify: httpx -version
+
+execute:
+  command: httpx -l {input_file} -json -silent {extra_args}
+  input:
+    input_file:
+      type: file
+      required: true
+      description: File with list of hosts/URLs
+    extra_args:
+      type: string
+      required: false
+      default: "-tech-detect -status-code -title"
+      description: Additional arguments
+  output:
+    format: json
+    type: http_probes
+  timeout: 600
+
+parse:
+  type: json
+  schema:
+    url:
+      path: "url"
+    status_code:
+      path: "status_code"
+    title:
+      path: "title"
+    technologies:
+      path: "tech"
+    content_length:
+      path: "content_length"
+
+capabilities:
+  - http_probing
+  - tech_detection
+  - status_check
+
+resources:
+  cpu: low
+  memory: low
+  network: high

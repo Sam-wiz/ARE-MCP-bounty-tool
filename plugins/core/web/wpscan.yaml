@@ -1,0 +1,38 @@
+# WPScan - WordPress Scanner
+name: wpscan
+category: testing.cms
+version: "3.8.24"
+description: WordPress security scanner
+
+install:
+  method: gem
+  command: gem install wpscan
+  verify: wpscan --version
+
+execute:
+  command: wpscan --url {target} --api-token {api_token} -f json -o {output_file}
+  input:
+    target:
+      type: string
+      required: true
+    api_token:
+      type: string
+      required: false
+    output_file:
+      type: string
+      default: "/tmp/wpscan.json"
+  output:
+    format: json
+    type: wordpress_findings
+  timeout: 1800
+
+capabilities:
+  - wordpress_scanning
+  - plugin_enumeration
+  - theme_enumeration
+  - user_enumeration
+
+resources:
+  cpu: medium
+  memory: medium
+  network: high

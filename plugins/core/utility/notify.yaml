@@ -1,0 +1,31 @@
+# Notify - Send notifications
+name: notify
+category: utility
+version: "1.0.5"
+description: Send notifications to Discord, Slack, Telegram
+
+install:
+  method: go
+  command: go install github.com/projectdiscovery/notify/cmd/notify@latest
+  verify: notify -version
+
+execute:
+  command: echo "{message}" | notify -silent -bulk
+  input:
+    message:
+      type: string
+      required: true
+  output:
+    format: text
+    type: notification
+  timeout: 60
+
+capabilities:
+  - discord_notify
+  - slack_notify
+  - telegram_notify
+
+resources:
+  cpu: low
+  memory: low
+  network: low
