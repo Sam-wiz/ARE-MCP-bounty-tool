@@ -1,0 +1,47 @@
+# apkeep — APK downloader from Google Play and APKPure (no auth required for APKPure)
+name: apkeep
+category: mobile.download
+version: "0.14.0"
+description: Download APKs directly from Google Play or APKPure without rooting or device. APKPure source requires no authentication.
+
+install:
+  method: cargo
+  command: cargo install apkeep
+  verify: apkeep --help
+
+execute:
+  # source: apkpure (no auth) | google-play (needs --username/--password)
+  command: apkeep -a {package_name} -d {source} {output_dir}
+  input:
+    package_name:
+      type: string
+      required: true
+      description: "Android package name (e.g. com.example.app)"
+    source:
+      type: string
+      default: "apkpure"
+      description: "Download source: apkpure (no auth) or google-play"
+    output_dir:
+      type: string
+      default: "/tmp/apks"
+    username:
+      type: string
+      description: "Google account email (only for google-play source)"
+    password:
+      type: string
+      description: "Google account password (only for google-play source)"
+  output:
+    format: file
+    type: apk
+  timeout: 120
+
+capabilities:
+  - apk_download
+  - google_play_download
+  - apkpure_download
+  - no_auth_download
+
+resources:
+  cpu: low
+  memory: low
+  network: required

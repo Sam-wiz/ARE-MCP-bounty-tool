@@ -103,6 +103,8 @@ func (e *Engine) ExecuteTool(ctx context.Context, name string, args map[string]i
 	// Mobile Testing
 	case "test_mobile":
 		return e.handleTestMobile(ctx, args)
+	case "download_app":
+		return e.handleDownloadApp(ctx, args)
 
 	// Fuzzing
 	case "fuzz_target":

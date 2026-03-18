@@ -1,0 +1,45 @@
+# ipatool — Download IPA files directly from the Apple App Store
+name: ipatool
+category: mobile.download
+version: "2.1.3"
+description: CLI tool to download IPA files from the Apple App Store. Free apps can be downloaded with just an Apple ID; paid apps require prior purchase.
+
+install:
+  method: brew
+  command: brew tap majd/repo && brew install ipatool
+  verify: ipatool --help
+
+execute:
+  command: ipatool download -b {bundle_id} --output {output_dir}
+  input:
+    bundle_id:
+      type: string
+      required: true
+      description: "iOS app bundle ID (e.g. com.example.app)"
+    output_dir:
+      type: string
+      default: "/tmp/ipas"
+    email:
+      type: string
+      description: "Apple ID email (required)"
+    password:
+      type: string
+      description: "Apple ID password (required)"
+    purchase:
+      type: boolean
+      default: false
+      description: "Purchase app before downloading (for paid apps)"
+  output:
+    format: file
+    type: ipa
+  timeout: 180
+
+capabilities:
+  - ipa_download
+  - app_store_download
+  - ios_app_download
+
+resources:
+  cpu: low
+  memory: low
+  network: required

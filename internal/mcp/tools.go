@@ -184,6 +184,44 @@ func (s *Server) registerTools() {
 			},
 		},
 
+		// === APP DOWNLOAD ===
+		{
+			Name:        "download_app",
+			Description: "Download APK from Google Play or APKPure (no auth needed for APKPure), or IPA from the Apple App Store. Use before test_mobile to pull the app directly.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"platform": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"android", "ios"},
+						"description": "Target platform",
+					},
+					"package_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Android package name (com.example.app) or iOS bundle ID",
+					},
+					"source": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"apkpure", "google-play"},
+						"description": "Android only — apkpure (no auth) or google-play (needs credentials)",
+					},
+					"output_dir": map[string]interface{}{
+						"type":        "string",
+						"description": "Directory to save the downloaded file (default: /tmp/apks)",
+					},
+					"email": map[string]interface{}{
+						"type":        "string",
+						"description": "Google account email (google-play source) or Apple ID (iOS)",
+					},
+					"password": map[string]interface{}{
+						"type":        "string",
+						"description": "Google account password or Apple ID password",
+					},
+				},
+				"required": []string{"platform", "package_id"},
+			},
+		},
+
 		// === FUZZING ===
 		{
 			Name:        "fuzz_target",

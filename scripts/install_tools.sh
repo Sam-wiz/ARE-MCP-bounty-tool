@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================================
 # hack-ai-v2 — Complete Tool Installer
-# Installs ALL 158 security tools defined in plugins/core/*.yaml
+# Installs ALL 160 security tools defined in plugins/core/*.yaml
 # Usage: bash scripts/install_tools.sh [--all|--go|--python|--system|--git|--rust|--opsec|--essentials|--check]
 # ============================================================================
 
@@ -351,6 +351,19 @@ install_system_tools() {
     # === Mobile (macOS) ===
     if [ "$OS" == "Darwin" ]; then
         try_brew_install findomain
+
+        # ipatool — download IPA files from the Apple App Store
+        TOTAL=$((TOTAL + 1))
+        if command -v ipatool &>/dev/null; then
+            log_exists "ipatool"
+        else
+            log_install "ipatool"
+            if brew tap majd/repo 2>/dev/null && brew install ipatool 2>/dev/null; then
+                log_ok "ipatool"
+            else
+                log_fail "ipatool — manual: brew tap majd/repo && brew install ipatool"
+            fi
+        fi
     fi
 
     # === Exploit/AD Tools ===
@@ -531,10 +544,17 @@ install_rust_tools() {
             log_install "x8"
             cargo install x8 2>/dev/null && log_ok "x8" || log_fail "x8"
         fi
+
+        # === Mobile App Downloader ===
+        TOTAL=$((TOTAL + 1))
+        if command -v apkeep &>/dev/null; then log_exists "apkeep"; else
+            log_install "apkeep"
+            cargo install apkeep 2>/dev/null && log_ok "apkeep" || log_fail "apkeep"
+        fi
     else
         echo -e "  ${RED}Cargo still not available. Skipping Rust tools.${NC}"
-        SKIPPED=$((SKIPPED + 3))
-        TOTAL=$((TOTAL + 3))
+        SKIPPED=$((SKIPPED + 4))
+        TOTAL=$((TOTAL + 4))
     fi
 }
 
@@ -844,7 +864,7 @@ usage() {
     echo "Usage: $0 [OPTION]"
     echo ""
     echo "Options:"
-    echo "  --all          Install ALL 158 tools (Go + Python + System + Git + Rust + NPM + Ruby + OPSEC + Wordlists)"
+    echo "  --all          Install ALL 160 tools (Go + Python + System + Git + Rust + NPM + Ruby + OPSEC + Wordlists)"
     echo "  --essentials   Quick start: 10 essential tools (subfinder, httpx, nuclei, ffuf, etc.)"
     echo "  --go           Install Go tools only (52 tools)"
     echo "  --python       Install Python tools only (32 tools)"
@@ -854,7 +874,7 @@ usage() {
     echo "  --npm          Install NPM tools only (2 tools)"
     echo "  --opsec        Install OPSEC/anonymization tools (ProtonVPN, proxychains, SpoofMAC, macchanger)"
     echo "  --wordlists    Install wordlists only (SecLists, PayloadsAllTheThings, etc.)"
-    echo "  --check        Audit — check which of 158 tools are installed"
+    echo "  --check        Audit — check which of 160 tools are installed"
     echo "  --help         Show this help message"
     echo ""
 }
@@ -865,7 +885,7 @@ main() {
     echo -e "${BOLD}${BLUE}"
     echo "  ╔═══════════════════════════════════════╗"
     echo "  ║       hack-ai-v2 Tool Installer       ║"
-    echo "  ║         158 Security Tools            ║"
+    echo "  ║         160 Security Tools            ║"
     echo "  ╚═══════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "  OS: $OS | Go: $(go version 2>/dev/null | awk '{print $3}' || echo 'not found')"
