@@ -338,8 +338,41 @@ type Session struct {
 
 // Scope represents the testing scope
 type Scope struct {
-	InScope     []string `json:"in_scope" bson:"in_scope"`
-	OutOfScope  []string `json:"out_of_scope" bson:"out_of_scope"`
-	VulnTypes   []string `json:"vuln_types,omitempty" bson:"vuln_types,omitempty"`
+	InScope      []string `json:"in_scope" bson:"in_scope"`
+	OutOfScope   []string `json:"out_of_scope" bson:"out_of_scope"`
+	VulnTypes    []string `json:"vuln_types,omitempty" bson:"vuln_types,omitempty"`
 	Restrictions []string `json:"restrictions,omitempty" bson:"restrictions,omitempty"`
+}
+
+// ============================================================================
+// SANDBOX EXECUTION
+// ============================================================================
+
+// ScriptExecution represents a sandboxed script execution record
+type ScriptExecution struct {
+	ID           primitive.ObjectID `bson:"_id,omitempty"`
+	Program      string             `bson:"program"`
+	SessionID    string             `bson:"session_id"`
+	Timestamp    time.Time          `bson:"timestamp"`
+	Runtime      string             `bson:"runtime"`      // "python" or "bash"
+	ScriptName   string             `bson:"script_name"`   // human-readable name
+	ScriptPath   string             `bson:"script_path"`   // saved script file
+	ArtifactLog  string             `bson:"artifact_log"`  // stdout/stderr log file
+	ExitCode     int                `bson:"exit_code"`
+	Duration     time.Duration      `bson:"duration"`
+	Success      bool               `bson:"success"`
+	Error        string             `bson:"error,omitempty"`
+	SecretsUsed  []string           `bson:"secrets_used,omitempty"`  // key names only, not values
+	Dependencies []string           `bson:"dependencies,omitempty"` // pip packages installed
+}
+
+// VectorStatus represents the exhaustion status of an attack vector
+type VectorStatus struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty"`
+	Program   string             `bson:"program"`
+	SessionID string             `bson:"session_id"`
+	Timestamp time.Time          `bson:"timestamp"`
+	VectorID  string             `bson:"vector_id"` // e.g., "IDOR-/api/v1/users/{id}"
+	State     string             `bson:"state"`      // EXHAUSTED, VULNERABLE, BLOCKED_BY_DESIGN
+	Rationale string             `bson:"rationale"`
 }

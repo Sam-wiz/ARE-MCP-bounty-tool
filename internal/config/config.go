@@ -13,6 +13,7 @@ type Config struct {
 	Workspace  WorkspaceConfig  `yaml:"workspace"`
 	OPSEC      OPSECConfig      `yaml:"opsec"`
 	Tools      ToolsConfig      `yaml:"tools"`
+	Sandbox    SandboxConfig    `yaml:"sandbox"`
 	Validation ValidationConfig `yaml:"validation"`
 	Reporting  ReportingConfig  `yaml:"reporting"`
 	Logging    LoggingConfig    `yaml:"logging"`
@@ -72,6 +73,13 @@ type TorConfig struct {
 type VPNConfig struct {
 	Enabled    bool   `yaml:"enabled"`
 	ConfigFile string `yaml:"config_file"`
+}
+
+// SandboxConfig for execute_hunting_script sandboxing
+type SandboxConfig struct {
+	MitmproxyPort   int    `yaml:"mitmproxy_port"`   // default: 8080
+	MitmproxyCACert string `yaml:"mitmproxy_ca_cert"` // path to mitmproxy CA cert
+	ScriptTimeout   int    `yaml:"script_timeout"`   // default: 600 seconds
 }
 
 // ToolsConfig for tool execution
@@ -153,6 +161,19 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Validation.DefaultLevel == 0 {
 		c.Validation.DefaultLevel = 3
+	}
+	if c.Sandbox.MitmproxyPort == 0 {
+		c.Sandbox.MitmproxyPort = 8080
+	}
+	if c.Sandbox.ScriptTimeout == 0 {
+		c.Sandbox.ScriptTimeout = 600
+	}
+	if c.Sandbox.MitmproxyCACert == "" {
+		home, _ := os.UserHomeDir()
+		defaultCA := home + "/.mitmproxy/mitmproxy-ca-cert.pem"
+		if _, err := os.Stat(defaultCA); err == nil {
+			c.Sandbox.MitmproxyCACert = defaultCA
+		}
 	}
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
