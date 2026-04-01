@@ -6,13 +6,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/samrudh/hack-ai-v2/internal/storage"
 	"github.com/samrudh/hack-ai-v2/internal/types"
+	"github.com/samrudh/hack-ai-v2/internal/workspace"
 )
 
 // ShellEscape escapes a string for safe use in shell commands.
@@ -236,7 +241,7 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 		}
 	} else {
 		summary.WriteString("📝 No structured findings parsed from output.\n")
-		raw := truncateString(stdout, 2000)
+		raw := smartTruncate(stdout, 2000)
 		if raw != "" {
 			summary.WriteString("\n--- Raw Output ---\n")
 			summary.WriteString(raw)
@@ -287,7 +292,7 @@ func (e *Engine) ExecuteRawCommand(ctx context.Context, command string, toolName
 		summary.WriteString(fmt.Sprintf("📝 Stderr: %s\n", strings.TrimSpace(stderr)))
 	}
 
-	raw := truncateString(stdout, 5000)
+	raw := smartTruncate(stdout, 5000)
 	if raw != "" {
 		summary.WriteString("\n--- Output ---\n")
 		summary.WriteString(raw)
@@ -296,10 +301,272 @@ func (e *Engine) ExecuteRawCommand(ctx context.Context, command string, toolName
 	return successResult(summary.String()), nil
 }
 
-// truncateString limits string length for output/storage
+// truncateString limits string length for storage (MongoDB)
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
 	return s[:maxLen] + fmt.Sprintf("\n... (truncated, total %d bytes)", len(s))
+}
+
+// smartTruncate keeps the head and tail of a long string, dropping the useless middle.
+// This prevents token bloat for LLM responses while keeping the crucial start/end context.
+func smartTruncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+
+	half := maxLen / 2
+	head := s[:half]
+	tail := s[len(s)-half:]
+	dropped := len(s) - maxLen
+
+	return fmt.Sprintf("%s\n\n... [TRUNCATED %d BYTES - Check artifacts folder] ...\n\n%s", head, dropped, tail)
+}
+
+// ============================================================================
+// SANDBOX EXECUTION — execute_hunting_script
+// ============================================================================
+
+// ExecuteHuntingScript runs a Python or Bash script inside a sandboxed environment.
+func (e *Engine) ExecuteHuntingScript(
+	ctx context.Context,
+	code string,
+	runtime string,
+	scriptName string,
+	secrets map[string]string,
+	dependencies []string,
+	ws *workspace.Workspace,
+) (types.ToolResult, error) {
+
+	// ── Step 0: Proxy Liveness Check ────────────────────────────────────
+	proxyAddr := "127.0.0.1:8080"
+	if e.config.Config != nil && e.config.Config.Sandbox.MitmproxyPort > 0 {
+		proxyAddr = fmt.Sprintf("127.0.0.1:%d", e.config.Config.Sandbox.MitmproxyPort)
+	}
+
+	conn, err := net.DialTimeout("tcp", proxyAddr, 2*time.Second)
+	if err != nil {
+		return errorResult(fmt.Sprintf(
+			"⛔ Proxy offline at %s. Start mitmproxy:\n  mitmproxy -s scripts/scope_enforcer.py --listen-port %s\n\nError: %v",
+			proxyAddr, proxyAddr[strings.LastIndex(proxyAddr, ":")+1:], err,
+		)), nil
+	}
+	conn.Close()
+
+	// ── Step 1: Resolve paths ───────────────────────────────────────────
+	if scriptName == "" {
+		scriptName = "script"
+	}
+	// Sanitize script name for filesystem safety
+	safeName := sanitizeScriptName(scriptName)
+	ts := time.Now().Unix()
+
+	var ext string
+	switch runtime {
+	case "python":
+		ext = "py"
+	case "bash":
+		ext = "sh"
+	default:
+		return errorResult(fmt.Sprintf("❌ Unsupported runtime: %s (must be 'python' or 'bash')", runtime)), nil
+	}
+
+	testsDir := ws.GetTestsPath()
+	artifactsDir := ws.GetArtifactsPath()
+	os.MkdirAll(testsDir, 0755)
+	os.MkdirAll(artifactsDir, 0755)
+
+	scriptFile := filepath.Join(testsDir, fmt.Sprintf("%s_%d.%s", safeName, ts, ext))
+	logFile := filepath.Join(artifactsDir, fmt.Sprintf("%s_%d.log", safeName, ts))
+
+	// ── Step 2: Install on-demand dependencies ──────────────────────────
+	if len(dependencies) > 0 && runtime == "python" {
+		log.Printf("[SANDBOX] Installing dependencies: %v", dependencies)
+		wsMgr := workspace.NewManager("")
+		if depErr := wsMgr.InstallDependencies(ws.Path, dependencies); depErr != nil {
+			return errorResult(fmt.Sprintf("❌ Failed to install dependencies %v: %v", dependencies, depErr)), nil
+		}
+	}
+
+	// ── Step 3: Save script to disk ─────────────────────────────────────
+	if err := os.WriteFile(scriptFile, []byte(code), 0644); err != nil {
+		return errorResult(fmt.Sprintf("❌ Failed to save script: %v", err)), nil
+	}
+	log.Printf("[SANDBOX] Script saved: %s", scriptFile)
+
+	// ── Step 4: Build command ───────────────────────────────────────────
+	var interpreter string
+	switch runtime {
+	case "python":
+		interpreter = ws.GetVenvPython()
+		// Verify venv exists
+		if _, err := os.Stat(interpreter); os.IsNotExist(err) {
+			return errorResult(fmt.Sprintf(
+				"❌ Venv Python not found at %s. Run set_program to create workspace first.", interpreter,
+			)), nil
+		}
+	case "bash":
+		interpreter = "/bin/bash"
+	}
+
+	cmd := exec.CommandContext(ctx, interpreter, scriptFile)
+	cmd.Dir = ws.Path
+
+	// ── Step 6: Build sandboxed environment ─────────────────────────────
+	proxyURL := fmt.Sprintf("http://%s", proxyAddr)
+	caCert := ""
+	if e.config.Config != nil {
+		caCert = e.config.Config.Sandbox.MitmproxyCACert
+	}
+
+	env := os.Environ() // inherit PATH and basic env
+	env = append(env,
+		"HTTP_PROXY="+proxyURL,
+		"HTTPS_PROXY="+proxyURL,
+		"http_proxy="+proxyURL,
+		"https_proxy="+proxyURL,
+	)
+	if caCert != "" {
+		env = append(env,
+			"REQUESTS_CA_BUNDLE="+caCert,
+			"SSL_CERT_FILE="+caCert,
+			"NODE_EXTRA_CA_CERTS="+caCert,
+			"CURL_CA_BUNDLE="+caCert,
+		)
+	}
+	// Inject secrets into env
+	secretKeys := make([]string, 0, len(secrets))
+	for k, v := range secrets {
+		env = append(env, k+"="+v)
+		secretKeys = append(secretKeys, k) // track key names only
+	}
+	cmd.Env = env
+
+	// ── Step 7: Open log file and wire stdout/stderr ────────────────────
+	logFd, err := os.Create(logFile)
+	if err != nil {
+		return errorResult(fmt.Sprintf("❌ Failed to create log file: %v", err)), nil
+	}
+	defer logFd.Close()
+
+	// Write header to log
+	fmt.Fprintf(logFd, "=== hack-ai-v2 Sandbox Execution ===\n")
+	fmt.Fprintf(logFd, "Script:    %s\n", scriptFile)
+	fmt.Fprintf(logFd, "Runtime:   %s\n", runtime)
+	fmt.Fprintf(logFd, "Timestamp: %s\n", time.Now().Format(time.RFC3339))
+	fmt.Fprintf(logFd, "Proxy:     %s\n", proxyURL)
+	if len(dependencies) > 0 {
+		fmt.Fprintf(logFd, "Deps:      %v\n", dependencies)
+	}
+	fmt.Fprintf(logFd, "=====================================\n\n")
+
+	var outputBuf bytes.Buffer
+	multiOut := io.MultiWriter(logFd, &outputBuf)
+
+	// ── Step 8: Execute with timeout ────────────────────────────────────
+	timeout := 600 // default 10 min
+	if e.config.Config != nil && e.config.Config.Sandbox.ScriptTimeout > 0 {
+		timeout = e.config.Config.Sandbox.ScriptTimeout
+	}
+
+	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+	cmd = exec.CommandContext(execCtx, interpreter, scriptFile)
+	cmd.Dir = ws.Path
+	cmd.Env = env
+	cmd.Stdout = multiOut
+	cmd.Stderr = multiOut
+
+	log.Printf("[SANDBOX] Executing: %s %s", interpreter, scriptFile)
+	startTime := time.Now()
+
+	execErr := cmd.Run()
+	duration := time.Since(startTime)
+
+	exitCode := 0
+	if cmd.ProcessState != nil {
+		exitCode = cmd.ProcessState.ExitCode()
+	}
+
+	// Write footer to log
+	fmt.Fprintf(logFd, "\n\n=====================================\n")
+	fmt.Fprintf(logFd, "Exit Code: %d\n", exitCode)
+	fmt.Fprintf(logFd, "Duration:  %v\n", duration.Round(time.Millisecond))
+	if execErr != nil {
+		fmt.Fprintf(logFd, "Error:     %v\n", execErr)
+	}
+	fmt.Fprintf(logFd, "=====================================\n")
+
+	log.Printf("[SANDBOX] Completed in %v (exit: %d)", duration, exitCode)
+
+	// ── Step 9: Log to MongoDB ──────────────────────────────────────────
+	if e.config.MongoDB != nil {
+		success := execErr == nil
+		errStr := ""
+		if execErr != nil {
+			errStr = execErr.Error()
+		}
+		scriptExec := &types.ScriptExecution{
+			Program:      e.GetProgram(),
+			SessionID:    e.getSessionID(),
+			Timestamp:    startTime,
+			Runtime:      runtime,
+			ScriptName:   scriptName,
+			ScriptPath:   scriptFile,
+			ArtifactLog:  logFile,
+			ExitCode:     exitCode,
+			Duration:     duration,
+			Success:      success,
+			Error:        errStr,
+			SecretsUsed:  secretKeys,
+			Dependencies: dependencies,
+		}
+		if logErr := e.config.MongoDB.LogScriptExecution(ctx, scriptExec); logErr != nil {
+			log.Printf("[SANDBOX] Failed to log execution to MongoDB: %v", logErr)
+		}
+	}
+
+	// ── Step 10: Build LLM response ─────────────────────────────────────
+	fullOutput := outputBuf.String()
+	
+	// FIX: Use smartTruncate instead of tailString to keep headers/status
+	snippet := smartTruncate(fullOutput, 2000)
+
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("🔒 Sandboxed Execution Complete\n"))
+	result.WriteString(fmt.Sprintf("📄 Script:   %s\n", scriptFile))
+	result.WriteString(fmt.Sprintf("📋 Log:      %s\n", logFile))
+	result.WriteString(fmt.Sprintf("⏱️  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
+	result.WriteString(fmt.Sprintf("🌐 Proxy:    %s (scope enforced)\n", proxyURL))
+
+	if execErr != nil {
+		result.WriteString(fmt.Sprintf("⚠️  Error: %v\n", execErr))
+	}
+	if len(dependencies) > 0 {
+		result.WriteString(fmt.Sprintf("📦 Deps installed: %v\n", dependencies))
+	}
+
+	result.WriteString("\n--- Output (Smart Truncated: First 1000 + Last 1000 chars) ---\n")
+	result.WriteString(snippet)
+	result.WriteString("\n\n💾 Full output preserved at: " + logFile)
+
+	return successResult(result.String()), nil
+}
+
+// sanitizeScriptName makes a script name filesystem-safe
+func sanitizeScriptName(name string) string {
+	safe := ""
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '-' || r == '_' {
+			safe += string(r)
+		} else if r == ' ' {
+			safe += "_"
+		}
+	}
+	if safe == "" {
+		safe = "script"
+	}
+	return safe
 }
