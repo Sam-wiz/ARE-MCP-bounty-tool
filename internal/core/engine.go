@@ -164,6 +164,12 @@ func (e *Engine) ExecuteTool(ctx context.Context, name string, args map[string]i
 	case "test_websocket":
 		return e.handleTestWebSocket(ctx, args)
 
+	// Sandbox execution
+	case "execute_hunting_script":
+		return e.handleExecuteHuntingScript(ctx, args)
+	case "log_vector_status":
+		return e.handleLogVectorStatus(ctx, args)
+
 	default:
 		// Try plugin
 		if plugin, exists := e.plugins.Get(name); exists {

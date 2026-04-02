@@ -184,41 +184,41 @@ func (s *Server) registerTools() {
 			},
 		},
 
-		// === APP DOWNLOAD ===
+		// === APP DOWNLOAD (APK/IPA Acquisition) ===
 		{
 			Name:        "download_app",
-			Description: "Download APK from Google Play or APKPure (no auth needed for APKPure), or IPA from the Apple App Store. Use before test_mobile to pull the app directly.",
+			Description: "Download mobile app binaries for analysis. Android: uses apkeep to download APKs from APKPure (NO AUTH needed), Google Play, or F-Droid. iOS: uses ipatool to download IPAs from App Store (needs Apple ID). Downloaded files can be passed to test_mobile for static analysis.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
+					"package_id": map[string]interface{}{
+						"type":        "string",
+						"description": "App package/bundle ID (e.g., com.instagram.android for Android, com.instagram.Instagram for iOS)",
+					},
 					"platform": map[string]interface{}{
 						"type":        "string",
 						"enum":        []string{"android", "ios"},
-						"description": "Target platform",
-					},
-					"package_id": map[string]interface{}{
-						"type":        "string",
-						"description": "Android package name (com.example.app) or iOS bundle ID",
+						"description": "Target platform (default: android)",
 					},
 					"source": map[string]interface{}{
 						"type":        "string",
-						"enum":        []string{"apkpure", "google-play"},
-						"description": "Android only — apkpure (no auth) or google-play (needs credentials)",
+						"enum":        []string{"apkpure", "google-play", "f-droid", "appstore"},
+						"description": "Download source. Android: apkpure (default, NO auth), google-play (needs email+token), f-droid. iOS: appstore (needs Apple ID).",
 					},
 					"output_dir": map[string]interface{}{
 						"type":        "string",
-						"description": "Directory to save the downloaded file (default: /tmp/apks)",
+						"description": "Output directory (default: /tmp/app_downloads)",
 					},
 					"email": map[string]interface{}{
 						"type":        "string",
-						"description": "Google account email (google-play source) or Apple ID (iOS)",
+						"description": "Google account email (only for google-play source)",
 					},
-					"password": map[string]interface{}{
+					"token": map[string]interface{}{
 						"type":        "string",
-						"description": "Google account password or Apple ID password",
+						"description": "AAS token for Google Play auth (only for google-play source)",
 					},
 				},
-				"required": []string{"platform", "package_id"},
+				"required": []string{"package_id"},
 			},
 		},
 
@@ -784,6 +784,74 @@ func (s *Server) registerTools() {
 						"description": "Program slug (defaults to active program)",
 					},
 				},
+			},
+		},
+
+		// === SANDBOX: EXECUTE HUNTING SCRIPT ===
+		{
+			Name: "execute_hunting_script",
+			Description: "Execute a Python or Bash hunting script in a sandboxed environment. " +
+				"All HTTP traffic is forced through mitmproxy (with scope enforcement). " +
+				"Python scripts use an isolated venv (not host Python). " +
+				"Secrets are injected via ephemeral env vars (never touch disk permanently). " +
+				"Script code + stdout/stderr saved to named files in tests/ and artifacts/. " +
+				"Returns last 2000 chars of output + path to full log file.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"code": map[string]interface{}{
+						"type":        "string",
+						"description": "The script source code to execute",
+					},
+					"runtime": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"python", "bash"},
+						"description": "Script runtime: python (uses venv) or bash",
+					},
+					"script_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Human-readable name for the script (e.g., saml_replay_test, idor_user_enum). Used in filenames for evidence review.",
+					},
+					"secrets": map[string]interface{}{
+						"type":        "object",
+						"description": "Key-value secrets injected as env vars. Ephemeral — written to .env, loaded, then deleted. Never persists.",
+					},
+					"dependencies": map[string]interface{}{
+						"type":        "array",
+						"items":       map[string]interface{}{"type": "string"},
+						"description": "Extra pip packages to install in the venv before running (e.g., signxml, saml2). Only for Python runtime.",
+					},
+				},
+				"required": []string{"code", "runtime"},
+			},
+		},
+
+		// === EXHAUSTION LEDGER: LOG VECTOR STATUS ===
+		{
+			Name: "log_vector_status",
+			Description: "Log the exhaustion status of an attack vector for deterministic termination. " +
+				"Use this to track which vectors have been fully tested vs. which are still open. " +
+				"EXHAUSTED = all test cases tried, no vuln found. " +
+				"VULNERABLE = confirmed vulnerability on this vector. " +
+				"BLOCKED_BY_DESIGN = cannot test (WAF, auth wall, scope restriction, etc).",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"vector_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Unique vector identifier (e.g., IDOR-/api/v1/users/{id}, XSS-search-param, SSRF-webhook-url)",
+					},
+					"state": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"EXHAUSTED", "VULNERABLE", "BLOCKED_BY_DESIGN"},
+						"description": "Final state of this attack vector",
+					},
+					"rationale": map[string]interface{}{
+						"type":        "string",
+						"description": "Detailed rationale for this state (e.g., 'Tested 50 ID permutations across 3 endpoints, all returned 403 with consistent error body')",
+					},
+				},
+				"required": []string{"vector_id", "state", "rationale"},
 			},
 		},
 	}

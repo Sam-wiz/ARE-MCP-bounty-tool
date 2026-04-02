@@ -3,7 +3,9 @@ package workspace
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -65,6 +67,8 @@ func (m *Manager) Create(programName string) (*Workspace, error) {
 		"tools/custom": filepath.Join(workspacePath, "tools", "custom"),
 		"logs":         filepath.Join(workspacePath, "logs"),
 		"poc":          filepath.Join(workspacePath, "poc"),
+		"tests":        filepath.Join(workspacePath, "tests"),
+		"artifacts":    filepath.Join(workspacePath, "artifacts"),
 	}
 	
 	for _, dir := range dirs {
@@ -89,7 +93,13 @@ func (m *Manager) Create(programName string) (*Workspace, error) {
 	if err := m.createInitialFiles(ws); err != nil {
 		return nil, err
 	}
-	
+
+	// Provision Python venv with pre-seeded packages
+	if err := m.ProvisionVenv(workspacePath); err != nil {
+		log.Printf("Warning: Failed to provision venv for %s: %v", programName, err)
+		// Non-fatal — workspace still usable, just no venv
+	}
+
 	return ws, nil
 }
 
@@ -354,4 +364,74 @@ func (ws *Workspace) SaveEvidence(evidenceType, findingID string, data []byte, e
 	path := filepath.Join(dir, filename)
 	
 	return path, os.WriteFile(path, data, 0644)
+}
+
+// ProvisionVenv creates a Python virtual environment and pre-seeds it with
+// standard bug bounty packages. Called during workspace creation.
+func (m *Manager) ProvisionVenv(workspacePath string) error {
+	venvPath := filepath.Join(workspacePath, ".venv")
+	if _, err := os.Stat(venvPath); err == nil {
+		return nil // already exists
+	}
+
+	// Create venv
+	log.Printf("[WORKSPACE] Creating Python venv at %s", venvPath)
+	cmd := exec.Command("python3", "-m", "venv", venvPath)
+	cmd.Dir = workspacePath
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to create venv: %w", err)
+	}
+
+	// Pre-seed with bug bounty toolkit
+	log.Printf("[WORKSPACE] Pre-seeding venv with standard packages")
+	pip := filepath.Join(venvPath, "bin", "pip")
+	seed := exec.Command(pip, "install", "-q",
+		"requests", "beautifulsoup4", "lxml", "pyjwt",
+		"websockets", "httpx", "cryptography")
+	seed.Dir = workspacePath
+	if err := seed.Run(); err != nil {
+		log.Printf("[WORKSPACE] Warning: pip install failed: %v", err)
+		return fmt.Errorf("failed to seed venv: %w", err)
+	}
+
+	log.Printf("[WORKSPACE] Venv ready at %s", venvPath)
+	return nil
+}
+
+// InstallDependencies installs additional pip packages into the workspace venv.
+func (m *Manager) InstallDependencies(workspacePath string, packages []string) error {
+	if len(packages) == 0 {
+		return nil
+	}
+	pip := filepath.Join(workspacePath, ".venv", "bin", "pip")
+	args := append([]string{"install", "-q"}, packages...)
+	cmd := exec.Command(pip, args...)
+	cmd.Dir = workspacePath
+	return cmd.Run()
+}
+
+// GetVenvPython returns the path to the venv Python interpreter
+func (ws *Workspace) GetVenvPython() string {
+	return filepath.Join(ws.Path, ".venv", "bin", "python")
+}
+
+// GetVenvPip returns the path to the venv pip
+func (ws *Workspace) GetVenvPip() string {
+	return filepath.Join(ws.Path, ".venv", "bin", "pip")
+}
+
+// GetTestsPath returns the tests directory
+func (ws *Workspace) GetTestsPath() string {
+	if p, ok := ws.Directories["tests"]; ok {
+		return p
+	}
+	return filepath.Join(ws.Path, "tests")
+}
+
+// GetArtifactsPath returns the artifacts directory
+func (ws *Workspace) GetArtifactsPath() string {
+	if p, ok := ws.Directories["artifacts"]; ok {
+		return p
+	}
+	return filepath.Join(ws.Path, "artifacts")
 }

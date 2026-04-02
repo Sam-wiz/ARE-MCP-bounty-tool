@@ -22,12 +22,14 @@ type MongoClient struct {
 
 // Collection names
 const (
-	CollectionDecisions     = "decisions"
-	CollectionConsultations = "consultations"
-	CollectionFindings      = "findings"
-	CollectionSessions      = "sessions"
-	CollectionToolRuns      = "tool_runs"
-	CollectionPrograms      = "programs"
+	CollectionDecisions        = "decisions"
+	CollectionConsultations    = "consultations"
+	CollectionFindings         = "findings"
+	CollectionSessions         = "sessions"
+	CollectionToolRuns         = "tool_runs"
+	CollectionPrograms         = "programs"
+	CollectionScriptExecutions = "script_executions"
+	CollectionVectorStatuses   = "vector_statuses"
 )
 
 // NewMongoClient creates a new MongoDB client
@@ -82,6 +84,14 @@ func (m *MongoClient) EnsureIndexes(ctx context.Context) {
 		},
 		CollectionPrograms: {
 			{Keys: bson.D{{Key: "slug", Value: 1}}, Options: options.Index().SetUnique(true)},
+		},
+		CollectionScriptExecutions: {
+			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "timestamp", Value: -1}}},
+			{Keys: bson.D{{Key: "session_id", Value: 1}}},
+		},
+		CollectionVectorStatuses: {
+			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "vector_id", Value: 1}}},
+			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "state", Value: 1}}},
 		},
 	}
 
@@ -558,4 +568,53 @@ func (m *MongoClient) GetSuccessfulDecisionPatterns(ctx context.Context, tags []
 	}
 
 	return decisions, nil
+}
+
+// ============================================================================
+// SANDBOX EXECUTIONS
+// ============================================================================
+
+// LogScriptExecution saves a sandboxed script execution to MongoDB
+func (m *MongoClient) LogScriptExecution(ctx context.Context, exec *types.ScriptExecution) error {
+	exec.ID = primitive.NewObjectID()
+	if exec.Timestamp.IsZero() {
+		exec.Timestamp = time.Now()
+	}
+
+	_, err := m.database.Collection(CollectionScriptExecutions).InsertOne(ctx, exec)
+	return err
+}
+
+// ============================================================================
+// VECTOR STATUSES (Exhaustion Ledger)
+// ============================================================================
+
+// LogVectorStatus saves an attack vector status to MongoDB
+func (m *MongoClient) LogVectorStatus(ctx context.Context, status *types.VectorStatus) error {
+	status.ID = primitive.NewObjectID()
+	if status.Timestamp.IsZero() {
+		status.Timestamp = time.Now()
+	}
+
+	_, err := m.database.Collection(CollectionVectorStatuses).InsertOne(ctx, status)
+	return err
+}
+
+// GetVectorStatuses retrieves all vector statuses for a program
+func (m *MongoClient) GetVectorStatuses(ctx context.Context, program string) ([]*types.VectorStatus, error) {
+	filter := bson.D{{Key: "program", Value: program}}
+	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: -1}})
+
+	cursor, err := m.database.Collection(CollectionVectorStatuses).Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var statuses []*types.VectorStatus
+	if err := cursor.All(ctx, &statuses); err != nil {
+		return nil, err
+	}
+
+	return statuses, nil
 }
