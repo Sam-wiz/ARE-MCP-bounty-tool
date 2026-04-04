@@ -467,6 +467,20 @@ hack-ai-v2/
 
 ---
 
+## Sandboxed Script Execution
+
+The `execute_hunting_script` MCP tool runs agent-generated Python or Bash scripts inside a sandboxed environment with scope enforcement. All HTTP traffic is routed through mitmproxy running `scripts/scope_enforcer.py`, which blocks any requests outside the active program's scope before they reach the network.
+
+Start the proxy before using this tool:
+
+```bash
+mitmproxy -s scripts/scope_enforcer.py --listen-port 8080
+```
+
+Scripts are saved under the workspace's `tests/` directory and their full output is written to `artifacts/` as a log file. The LLM receives a smart-truncated preview (first 1000 + last 1000 chars) so it sees the HTTP status and any error traces without burning context on useless middle content.
+
+---
+
 ## Legal
 
 For authorized security testing only. Always obtain written permission before testing any target. Scope validation is enforced by the tool, but legal responsibility for authorized use remains with the operator.

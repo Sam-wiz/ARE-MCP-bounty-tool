@@ -99,14 +99,6 @@ func main() {
 }
 
 func printBanner() {
-	banner := `
-╔══════════════════════════════════════════════════════════════╗
-║   Bug Bounty Automation v2.0 - Go Edition                    ║
-║   Validation Pipeline | OPSEC Layer | 154 Tools              ║
-║   Decision Logging | Autonomous Workers                      ║
-╚══════════════════════════════════════════════════════════════╝
-`
-	fmt.Fprint(os.Stderr, banner)
 	fmt.Fprintln(os.Stderr, "Server Status: STARTING")
 	fmt.Fprintln(os.Stderr, "Protocol: MCP (Model Context Protocol)")
 	fmt.Fprintln(os.Stderr, "Transport: stdio")
