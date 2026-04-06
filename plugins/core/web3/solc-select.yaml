@@ -1,0 +1,38 @@
+# solc-select — Solidity Compiler Version Manager
+name: solc-select
+category: web3.evm
+version: "1.0+"
+description: >
+  Manage and switch between multiple Solidity compiler versions.
+  Required dependency for Slither and other static analysis tools.
+
+install:
+  method: pip
+  command: pip3 install solc-select
+  verify: solc-select --version
+
+execute:
+  command: solc-select {subcommand} {extra_args}
+  input:
+    subcommand:
+      type: string
+      required: true
+      description: "install, use, versions"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Solidity version (e.g., 0.8.20)"
+  output:
+    format: text
+    type: utility
+  timeout: 120
+
+capabilities:
+  - compiler_management
+  - version_switching
+
+resources:
+  cpu: low
+  memory: low
+  network: low

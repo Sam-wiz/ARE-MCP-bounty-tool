@@ -1,0 +1,43 @@
+# Foundry — EVM Development & Auditing Toolkit (forge, cast, anvil, chisel)
+name: foundry
+category: web3.evm
+version: "latest"
+description: >
+  The gold standard for EVM smart contract development and auditing.
+  Includes forge (build/test/fuzz), cast (chain queries), anvil (local fork), chisel (REPL).
+  Write Solidity PoCs, fork mainnet, simulate exploits.
+
+install:
+  method: custom
+  command: curl -L https://foundry.paradigm.xyz | bash && foundryup
+  verify: forge --version
+
+execute:
+  command: forge {subcommand} {extra_args}
+  input:
+    subcommand:
+      type: string
+      required: true
+      description: "Subcommand: test, build, script, inspect, coverage, snapshot"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments (e.g., --fork-url, --match-test, -vvvv)
+  output:
+    format: text
+    type: audit_results
+  timeout: 1800
+
+capabilities:
+  - smart_contract_testing
+  - fuzzing
+  - chain_forking
+  - solidity_compilation
+  - transaction_simulation
+  - gas_analysis
+
+resources:
+  cpu: high
+  memory: high
+  network: moderate
