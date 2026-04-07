@@ -1,0 +1,54 @@
+# Slither — Solidity Static Analysis Framework
+name: slither
+category: web3.evm
+version: "0.10+"
+description: >
+  Trail of Bits static analysis framework for Solidity.
+  Detects reentrancy, uninitialized state vars, access control issues, and 90+ vulnerability patterns.
+  IMPORTANT: Use --json flag for programmatic parsing. Raw output can be 15k+ lines on large codebases.
+
+install:
+  method: pip
+  command: pip3 install slither-analyzer
+  verify: slither --version
+
+execute:
+  command: slither {target} --json - {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Solidity file, directory, or Foundry project path"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--exclude informational, --filter-paths node_modules)"
+  output:
+    format: json
+    type: vulnerabilities
+  timeout: 600
+
+parse:
+  type: json
+  schema:
+    detector:
+      path: "results.detectors[].check"
+    impact:
+      path: "results.detectors[].impact"
+    confidence:
+      path: "results.detectors[].confidence"
+    description:
+      path: "results.detectors[].description"
+
+capabilities:
+  - static_analysis
+  - vulnerability_detection
+  - solidity_audit
+  - reentrancy_detection
+  - access_control_analysis
+
+resources:
+  cpu: high
+  memory: high
+  network: none

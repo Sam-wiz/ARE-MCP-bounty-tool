@@ -1,0 +1,41 @@
+# Mythril — Symbolic Execution for EVM Bytecode
+name: mythril
+category: web3.evm
+version: "0.24+"
+description: >
+  Symbolic execution and concolic analysis tool for EVM bytecode.
+  Detects integer overflows, reentrancy, unhandled exceptions, and tx.origin misuse.
+  Can analyze both source code and deployed bytecode directly.
+
+install:
+  method: pip
+  command: pip3 install mythril
+  verify: myth version
+
+execute:
+  command: myth analyze {target} -o json {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Solidity file path or contract address"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--execution-timeout 90, --max-depth 22, --solv)"
+  output:
+    format: json
+    type: vulnerabilities
+  timeout: 600
+
+capabilities:
+  - symbolic_execution
+  - bytecode_analysis
+  - vulnerability_detection
+  - integer_overflow_detection
+
+resources:
+  cpu: high
+  memory: high
+  network: low

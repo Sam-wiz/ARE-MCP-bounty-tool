@@ -1,0 +1,41 @@
+# Halmos — Symbolic Testing for EVM Smart Contracts
+name: halmos
+category: web3.evm
+version: "latest"
+description: >
+  Symbolic execution / formal verification tool for Foundry projects.
+  Mathematically proves bugs exist (or can't exist) by testing against ALL possible inputs.
+  Use check_ prefix instead of test_ for symbolic tests. High P1 potential.
+
+install:
+  method: pip
+  command: pip3 install halmos
+  verify: halmos --version
+
+execute:
+  command: halmos --root {project_dir} {extra_args}
+  input:
+    project_dir:
+      type: string
+      required: true
+      description: "Foundry project root directory"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--function check_*, --loop 10, --solver-timeout-assertion)"
+  output:
+    format: text
+    type: verification_results
+  timeout: 1800
+
+capabilities:
+  - formal_verification
+  - symbolic_execution
+  - mathematical_proof
+  - smart_contract_audit
+
+resources:
+  cpu: high
+  memory: high
+  network: none
