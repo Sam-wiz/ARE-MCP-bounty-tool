@@ -1,0 +1,41 @@
+# Medusa — Parallel Smart Contract Fuzzer
+name: medusa
+category: web3.evm
+version: "latest"
+description: >
+  Go-based parallel fuzzer for EVM smart contracts by Trail of Bits.
+  Successor to Echidna — faster, multi-threaded, integrates with Slither for input optimization.
+  Excellent for large DeFi protocols like Moonwell/Compound forks.
+
+install:
+  method: brew
+  command: brew install medusa
+  verify: medusa --version
+
+execute:
+  command: medusa fuzz --target {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Foundry project directory"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--test-limit, --workers, --corpus-dir)"
+  output:
+    format: text
+    type: fuzzing_results
+  timeout: 3600
+
+capabilities:
+  - fuzzing
+  - parallel_fuzzing
+  - invariant_testing
+  - smart_contract_audit
+
+resources:
+  cpu: high
+  memory: high
+  network: none

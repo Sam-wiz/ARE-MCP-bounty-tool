@@ -1,0 +1,45 @@
+# Echidna — Property-Based Smart Contract Fuzzer
+name: echidna
+category: web3.evm
+version: "2.2+"
+description: >
+  Trail of Bits property-based fuzzer for Ethereum smart contracts.
+  Define invariants, Echidna throws millions of random transactions to break them.
+  Powerful for finding edge cases in DeFi math, oracle manipulation, and governance logic.
+
+install:
+  method: brew
+  command: brew install echidna
+  verify: echidna --version
+
+execute:
+  command: echidna {target} --contract {contract} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Solidity file or project directory"
+    contract:
+      type: string
+      required: true
+      description: "Contract name to fuzz"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--test-mode assertion, --corpus-dir, --test-limit)"
+  output:
+    format: text
+    type: fuzzing_results
+  timeout: 3600
+
+capabilities:
+  - fuzzing
+  - invariant_testing
+  - property_based_testing
+  - smart_contract_audit
+
+resources:
+  cpu: high
+  memory: high
+  network: none
