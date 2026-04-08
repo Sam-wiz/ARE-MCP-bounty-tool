@@ -1,0 +1,35 @@
+# Solidity Coverage — Code Coverage for Smart Contract Tests
+name: solidity-coverage
+category: web3.workflow
+version: "latest"
+description: >
+  Code coverage reporting for Foundry/Hardhat test suites.
+  Identifies untested code paths — prime locations for hidden vulnerabilities.
+
+install:
+  method: npm
+  command: npm install -g solidity-coverage
+  verify: npx solidity-coverage --version
+
+execute:
+  command: npx solidity-coverage {extra_args}
+  input:
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: coverage_report
+  timeout: 600
+
+capabilities:
+  - code_coverage
+  - test_analysis
+  - audit_planning
+
+resources:
+  cpu: medium
+  memory: medium
+  network: none

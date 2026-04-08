@@ -1,0 +1,45 @@
+# Surya — Solidity Visual Auditing Utility
+name: surya
+category: web3.evm
+version: "latest"
+description: >
+  Generates control-flow graphs, inheritance trees, and function call graphs for Solidity.
+  Essential for understanding massive codebases like Moonwell's multichain governance.
+  Outputs text graphs readable by CLI agents.
+
+install:
+  method: npm
+  command: npm install -g surya
+  verify: surya --version
+
+execute:
+  command: surya {subcommand} {target} {extra_args}
+  input:
+    subcommand:
+      type: string
+      required: true
+      description: "graph, ftrace, flatten, describe, inheritance, parse, mdreport"
+    target:
+      type: string
+      required: true
+      description: "Solidity file(s) or glob pattern"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: code_analysis
+  timeout: 120
+
+capabilities:
+  - control_flow_analysis
+  - inheritance_visualization
+  - function_tracing
+  - code_comprehension
+
+resources:
+  cpu: low
+  memory: low
+  network: none

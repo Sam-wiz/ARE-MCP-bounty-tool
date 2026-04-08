@@ -1,0 +1,40 @@
+# Solidity Metrics — Codebase Complexity Reporter
+name: solidity-metrics
+category: web3.evm
+version: "latest"
+description: >
+  Generates complexity reports for Solidity codebases.
+  Shows lines of code, cyclomatic complexity, and dependency graphs.
+  Use to identify high-risk areas before deep manual audit.
+
+install:
+  method: npm
+  command: npm install -g solidity-code-metrics
+  verify: solidity-code-metrics --version
+
+execute:
+  command: solidity-code-metrics {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Solidity file or glob pattern"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: code_analysis
+  timeout: 120
+
+capabilities:
+  - code_metrics
+  - complexity_analysis
+  - audit_planning
+
+resources:
+  cpu: low
+  memory: low
+  network: none
