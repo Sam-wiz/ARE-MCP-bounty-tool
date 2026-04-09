@@ -1,0 +1,39 @@
+# Aderyn — Rust-based Solidity Static Analyzer
+name: aderyn
+category: web3.evm
+version: "latest"
+description: >
+  Fast Rust-based static analysis for Solidity smart contracts.
+  Modern detector set, outputs markdown reports. Complements Slither.
+
+install:
+  method: cargo
+  command: cargo install aderyn
+  verify: aderyn --version
+
+execute:
+  command: aderyn {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Foundry project root or Solidity source directory"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: audit_results
+  timeout: 300
+
+capabilities:
+  - static_analysis
+  - solidity_audit
+  - vulnerability_detection
+
+resources:
+  cpu: medium
+  memory: medium
+  network: none

@@ -1,0 +1,41 @@
+# 4naly3er — Automated C4 Gas & QA Report Generator
+name: 4naly3er
+category: web3.evm
+version: "latest"
+description: >
+  Automatically generates gas optimization and QA findings for Code4rena competitions.
+  Scans Solidity source and outputs categorized findings in markdown.
+  WARNING: Produces verbose output. Use with artifact logging (execute_hunting_script).
+
+install:
+  method: git
+  command: git clone https://github.com/Picodes/4naly3er.git
+  verify: ls 4naly3er/src/index.ts
+
+execute:
+  command: npx ts-node 4naly3er/src/index.ts {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Solidity source directory to analyze"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: audit_results
+  timeout: 300
+
+capabilities:
+  - gas_optimization
+  - qa_analysis
+  - automated_reporting
+  - code4rena_competition
+
+resources:
+  cpu: medium
+  memory: medium
+  network: none
