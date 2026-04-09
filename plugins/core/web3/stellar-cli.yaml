@@ -1,0 +1,41 @@
+# Stellar CLI — Soroban Smart Contract Toolkit
+name: stellar-cli
+category: web3.rust
+version: "latest"
+description: >
+  Core toolkit for deploying, invoking, and testing Stellar Soroban smart contracts.
+  Simulate 200-read limits, TTL constraints, and state expiration.
+  Required for LayerZero Soroban audit targets.
+
+install:
+  method: cargo
+  command: cargo install --locked stellar-cli
+  verify: stellar --version
+
+execute:
+  command: stellar {subcommand} {extra_args}
+  input:
+    subcommand:
+      type: string
+      required: true
+      description: "contract build, contract deploy, contract invoke, contract inspect"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: smart_contract
+  timeout: 600
+
+capabilities:
+  - soroban_contracts
+  - contract_deployment
+  - contract_testing
+  - stellar_blockchain
+
+resources:
+  cpu: medium
+  memory: medium
+  network: moderate

@@ -1,0 +1,43 @@
+# wasm-tools — WebAssembly Tooling
+name: wasm-tools
+category: web3.rust
+version: "latest"
+description: >
+  Validate, strip, demangle, and analyze WebAssembly binaries.
+  Complements WABT for deeper WASM analysis on Soroban contracts.
+
+install:
+  method: cargo
+  command: cargo install wasm-tools
+  verify: wasm-tools --version
+
+execute:
+  command: wasm-tools {subcommand} {target} {extra_args}
+  input:
+    subcommand:
+      type: string
+      required: true
+      description: "validate, strip, demangle, dump, objdump"
+    target:
+      type: string
+      required: true
+      description: "WASM binary file path"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: binary_analysis
+  timeout: 120
+
+capabilities:
+  - wasm_validation
+  - binary_stripping
+  - wasm_analysis
+
+resources:
+  cpu: low
+  memory: low
+  network: none

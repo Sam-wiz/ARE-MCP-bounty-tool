@@ -1,0 +1,40 @@
+# WABT — WebAssembly Binary Toolkit
+name: wabt
+category: web3.rust
+version: "latest"
+description: >
+  WebAssembly Binary Toolkit — decompile, inspect, and validate WASM binaries.
+  Since Soroban compiles to WASM, use wasm-decompile and wasm-objdump
+  to inspect compiled bytecode for compiler-level vulnerabilities.
+
+install:
+  method: brew
+  command: brew install wabt
+  verify: wasm-decompile --version
+
+execute:
+  command: wasm-decompile {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "WASM binary file path"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: code_analysis
+  timeout: 120
+
+capabilities:
+  - wasm_decompilation
+  - bytecode_inspection
+  - binary_analysis
+
+resources:
+  cpu: low
+  memory: low
+  network: none
