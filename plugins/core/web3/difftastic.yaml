@@ -1,0 +1,44 @@
+# Difftastic — Structural CLI Diff Tool
+name: difftastic
+category: web3.workflow
+version: "latest"
+description: >
+  CLI-based structural diffing tool with syntax highlighting.
+  Compare forked smart contracts against originals to find customized changes.
+  The bugs almost always live in the diffs. Works headlessly (no GUI required).
+
+install:
+  method: brew
+  command: brew install difftastic
+  verify: difft --version
+
+execute:
+  command: difft {file_a} {file_b} {extra_args}
+  input:
+    file_a:
+      type: string
+      required: true
+      description: "Original file (e.g., original Compound V2 source)"
+    file_b:
+      type: string
+      required: true
+      description: "Modified file (e.g., Moonwell's fork)"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--display side-by-side, --context 5)"
+  output:
+    format: text
+    type: diff_analysis
+  timeout: 60
+
+capabilities:
+  - structural_diffing
+  - code_comparison
+  - fork_analysis
+
+resources:
+  cpu: low
+  memory: low
+  network: none

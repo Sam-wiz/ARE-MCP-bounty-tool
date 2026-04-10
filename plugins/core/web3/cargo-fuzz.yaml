@@ -1,0 +1,40 @@
+# cargo-fuzz — Rust Fuzzing via libFuzzer
+name: cargo-fuzz
+category: web3.rust
+version: "latest"
+description: >
+  libFuzzer integration for Rust projects.
+  Feed random/malformed data into message serialization, deserialization, and parsing functions.
+  Essential for finding panics, OOB reads, and integer overflows in Soroban contracts.
+
+install:
+  method: cargo
+  command: cargo install cargo-fuzz
+  verify: cargo fuzz --version
+
+execute:
+  command: cargo fuzz run {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Fuzz target name"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (-- -max_total_time=60, -jobs=4)"
+  output:
+    format: text
+    type: fuzzing_results
+  timeout: 3600
+
+capabilities:
+  - rust_fuzzing
+  - crash_detection
+  - memory_safety_testing
+
+resources:
+  cpu: high
+  memory: high
+  network: none

@@ -1,0 +1,35 @@
+# cargo-audit — Rust Dependency CVE Scanner
+name: cargo-audit
+category: web3.rust
+version: "latest"
+description: >
+  Scans Cargo.lock for known CVEs in Rust dependencies.
+  Critical for identifying vulnerable crates in Soroban/LayerZero codebases.
+
+install:
+  method: cargo
+  command: cargo install cargo-audit
+  verify: cargo audit --version
+
+execute:
+  command: cargo audit --json {extra_args}
+  input:
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: "Additional args (--file /path/to/Cargo.lock)"
+  output:
+    format: json
+    type: vulnerabilities
+  timeout: 120
+
+capabilities:
+  - dependency_audit
+  - cve_detection
+  - supply_chain_security
+
+resources:
+  cpu: low
+  memory: low
+  network: moderate
