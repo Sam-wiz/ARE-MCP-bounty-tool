@@ -1,0 +1,41 @@
+# Pyrometer — Abstract Interpretation for Solidity
+name: pyrometer
+category: web3.workflow
+version: "latest"
+description: >
+  Abstract interpretation engine for Solidity smart contracts.
+  Catches range/bound errors, integer truncation, and unreachable code paths.
+  High P1 potential for DeFi math bugs (oracle precision, rounding errors).
+
+install:
+  method: cargo
+  command: cargo install pyrometer
+  verify: pyrometer --version
+
+execute:
+  command: pyrometer {target} {extra_args}
+  input:
+    target:
+      type: string
+      required: true
+      description: "Solidity file or project path"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: audit_results
+  timeout: 600
+
+capabilities:
+  - abstract_interpretation
+  - range_analysis
+  - bound_checking
+  - math_verification
+
+resources:
+  cpu: high
+  memory: high
+  network: none

@@ -1,0 +1,41 @@
+# Tenderly CLI — Transaction Simulation & Debugging
+name: tenderly
+category: web3.workflow
+version: "latest"
+description: >
+  Transaction simulation and step-by-step debugging on forked chains.
+  Simulate complex exploit paths on Moonwell to see exact state changes and gas.
+  API key should be injected via sandbox secrets (TENDERLY_ACCESS_KEY).
+
+install:
+  method: brew
+  command: brew tap tenderly/tenderly && brew install tenderly
+  verify: tenderly version
+
+execute:
+  command: tenderly {subcommand} {extra_args}
+  input:
+    subcommand:
+      type: string
+      required: true
+      description: "export, verify, push, actions"
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments
+  output:
+    format: text
+    type: transaction_analysis
+  timeout: 300
+
+capabilities:
+  - transaction_simulation
+  - state_debugging
+  - gas_analysis
+  - chain_forking
+
+resources:
+  cpu: low
+  memory: low
+  network: high
