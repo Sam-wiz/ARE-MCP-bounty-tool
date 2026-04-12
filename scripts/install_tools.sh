@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================================
 # hack-ai-v2 — Complete Tool Installer
-# Installs ALL 158 security tools defined in plugins/core/*.yaml
-# Usage: bash scripts/install_tools.sh [--all|--go|--python|--system|--git|--rust|--opsec|--essentials|--check]
+# Installs ALL 183 security tools defined in plugins/core/*.yaml
+# Usage: bash scripts/install_tools.sh [--all|--go|--python|--system|--git|--rust|--web3|--opsec|--essentials|--check]
 # ============================================================================
 
 set -euo pipefail
@@ -701,6 +701,269 @@ install_opsec_tools() {
 }
 
 # ============================================================================
+# WEB3 / SMART CONTRACT AUDITING TOOLS (25 tools)
+# ============================================================================
+
+install_web3_tools() {
+    log_header "Web3 Smart Contract Arsenal (25)"
+
+    # ── EVM & Solidity (Moonwell, Compound forks) ────────────────────────
+
+    # === Foundry (forge, cast, anvil, chisel) ===
+    TOTAL=$((TOTAL + 1))
+    if command -v forge &>/dev/null; then
+        log_exists "foundry (forge)"
+    else
+        log_install "foundry (forge, cast, anvil, chisel)"
+        if command -v brew &>/dev/null && brew install foundry 2>/dev/null; then
+            log_ok "foundry (via brew)"
+        elif curl -L https://foundry.paradigm.xyz 2>/dev/null | bash 2>/dev/null && \
+             "$HOME/.foundry/bin/foundryup" 2>/dev/null; then
+            log_ok "foundry (via foundryup)"
+        else
+            log_fail "foundry — run: curl -L https://foundry.paradigm.xyz | bash && foundryup"
+        fi
+    fi
+
+    # === Slither — Static Analysis ===
+    try_pip_install slither "slither-analyzer"
+
+    # === solc-select — Solidity version manager (required by Slither) ===
+    try_pip_install solc-select "solc-select"
+
+    # === Echidna — Property-Based Fuzzer ===
+    try_brew_install echidna
+
+    # === Medusa — Parallel Fuzzer ===
+    try_brew_install medusa
+
+    # === Halmos — Formal Verification ===
+    try_pip_install halmos "halmos"
+
+    # === Mythril — Symbolic Execution ===
+    # Mythril has heavy C deps (z3-solver) — try pipx first, then brew
+    TOTAL=$((TOTAL + 1))
+    if command -v myth &>/dev/null; then
+        log_exists "mythril (myth)"
+    else
+        log_install "mythril"
+        if command -v pipx &>/dev/null && pipx install mythril 2>/dev/null; then
+            log_ok "mythril (via pipx)"
+        elif pip3 install mythril --user --quiet --break-system-packages 2>/dev/null; then
+            log_ok "mythril (via pip3)"
+        elif command -v brew &>/dev/null && brew install mythril 2>/dev/null; then
+            log_ok "mythril (via brew)"
+        else
+            log_fail "mythril — try: pip3 install mythril (needs z3-solver, may need: brew install z3)"
+        fi
+    fi
+
+    # === Surya — Code Visualization ===
+    TOTAL=$((TOTAL + 1))
+    if command -v surya &>/dev/null; then
+        log_exists "surya"
+    else
+        log_install "surya"
+        if command -v npm &>/dev/null && npm install -g surya 2>/dev/null; then
+            log_ok "surya"
+        else
+            log_fail "surya — run: npm install -g surya"
+        fi
+    fi
+
+    # === Solidity Metrics ===
+    TOTAL=$((TOTAL + 1))
+    if command -v solidity-code-metrics &>/dev/null; then
+        log_exists "solidity-code-metrics"
+    else
+        log_install "solidity-code-metrics"
+        if command -v npm &>/dev/null && npm install -g solidity-code-metrics 2>/dev/null; then
+            log_ok "solidity-code-metrics"
+        else
+            log_fail "solidity-code-metrics"
+        fi
+    fi
+
+    # === Aderyn — Rust-based Solidity Analyzer ===
+    TOTAL=$((TOTAL + 1))
+    if command -v aderyn &>/dev/null; then
+        log_exists "aderyn"
+    else
+        log_install "aderyn"
+        if command -v cargo &>/dev/null && cargo install aderyn 2>/dev/null; then
+            log_ok "aderyn"
+        else
+            log_fail "aderyn — run: cargo install aderyn"
+        fi
+    fi
+
+    # === 4naly3er — C4 Report Generator ===
+    try_git_install 4naly3er "https://github.com/Picodes/4naly3er.git" "npm install 2>/dev/null || true"
+
+    # ── Rust & WASM / Soroban (LayerZero, Stellar) ───────────────────────
+
+    # === Stellar CLI ===
+    TOTAL=$((TOTAL + 1))
+    if command -v stellar &>/dev/null || command -v soroban &>/dev/null; then
+        log_exists "stellar-cli"
+    else
+        log_install "stellar-cli"
+        if command -v cargo &>/dev/null && cargo install --locked stellar-cli 2>/dev/null; then
+            log_ok "stellar-cli"
+        else
+            log_fail "stellar-cli — run: cargo install --locked stellar-cli"
+        fi
+    fi
+
+    # === cargo-fuzz ===
+    TOTAL=$((TOTAL + 1))
+    if cargo fuzz --version &>/dev/null 2>&1; then
+        log_exists "cargo-fuzz"
+    else
+        log_install "cargo-fuzz"
+        if command -v cargo &>/dev/null && cargo install cargo-fuzz 2>/dev/null; then
+            log_ok "cargo-fuzz"
+        else
+            log_fail "cargo-fuzz"
+        fi
+    fi
+
+    # === cargo-audit ===
+    TOTAL=$((TOTAL + 1))
+    if command -v cargo-audit &>/dev/null; then
+        log_exists "cargo-audit"
+    else
+        log_install "cargo-audit"
+        if command -v cargo &>/dev/null && cargo install cargo-audit 2>/dev/null; then
+            log_ok "cargo-audit"
+        else
+            log_fail "cargo-audit"
+        fi
+    fi
+
+    # === Miri — Rust UB Detector (requires nightly via rustup) ===
+    TOTAL=$((TOTAL + 1))
+    if rustup +nightly component list 2>/dev/null | grep -q "miri.*installed"; then
+        log_exists "miri"
+    else
+        log_install "miri (nightly toolchain)"
+        # Install rustup if not present (brew-installed Rust doesn't include it)
+        if ! command -v rustup &>/dev/null; then
+            echo -e "    ${YELLOW}rustup not found — installing...${NC}"
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable 2>/dev/null
+            export PATH="$HOME/.cargo/bin:$PATH"
+        fi
+        if command -v rustup &>/dev/null; then
+            rustup toolchain install nightly 2>/dev/null && \
+            rustup +nightly component add miri 2>/dev/null && \
+            log_ok "miri" || log_fail "miri"
+        else
+            log_fail "miri — rustup installation failed"
+        fi
+    fi
+
+    # === Clippy (bundled with Rust) ===
+    TOTAL=$((TOTAL + 1))
+    if command -v cargo-clippy &>/dev/null || cargo clippy --version &>/dev/null 2>&1; then
+        log_exists "clippy"
+    else
+        log_install "clippy"
+        rustup component add clippy 2>/dev/null && log_ok "clippy" || log_fail "clippy"
+    fi
+
+    # === WABT — WebAssembly Binary Toolkit ===
+    try_brew_install wasm-decompile "wabt"
+
+    # === wasm-tools ===
+    TOTAL=$((TOTAL + 1))
+    if command -v wasm-tools &>/dev/null; then
+        log_exists "wasm-tools"
+    else
+        log_install "wasm-tools"
+        if command -v cargo &>/dev/null && cargo install wasm-tools 2>/dev/null; then
+            log_ok "wasm-tools"
+        else
+            log_fail "wasm-tools"
+        fi
+    fi
+
+    # === Rust WASM target for Soroban ===
+    TOTAL=$((TOTAL + 1))
+    if rustup target list 2>/dev/null | grep -q "wasm32.*installed"; then
+        log_exists "wasm32 target"
+    else
+        log_install "wasm32 target (for Soroban)"
+        if command -v rustup &>/dev/null; then
+            rustup target add wasm32-unknown-unknown 2>/dev/null && log_ok "wasm32 target" || log_fail "wasm32 target"
+        else
+            log_skip "wasm32 target (rustup not available — install rustup first)"
+        fi
+    fi
+
+    # ── Workflow & Analysis ──────────────────────────────────────────────
+
+    # === Tenderly CLI ===
+    TOTAL=$((TOTAL + 1))
+    if command -v tenderly &>/dev/null; then
+        log_exists "tenderly"
+    else
+        log_install "tenderly"
+        if command -v brew &>/dev/null; then
+            brew tap tenderly/tenderly 2>/dev/null && \
+            brew install tenderly 2>/dev/null && \
+            log_ok "tenderly" || log_fail "tenderly"
+        else
+            log_fail "tenderly — run: brew tap tenderly/tenderly && brew install tenderly"
+        fi
+    fi
+
+    # === Difftastic — CLI structural diff (NOT Meld — headless-safe) ===
+    try_brew_install difft "difftastic"
+
+    # === Pyrometer — Abstract Interpretation ===
+    TOTAL=$((TOTAL + 1))
+    if command -v pyrometer &>/dev/null; then
+        log_exists "pyrometer"
+    else
+        log_install "pyrometer"
+        if command -v cargo &>/dev/null && cargo install pyrometer 2>/dev/null; then
+            log_ok "pyrometer"
+        else
+            # Pyrometer is niche and often fails to compile — try git clone fallback
+            local pyro_dir="$TOOLS_DIR/pyrometer"
+            if [ -d "$pyro_dir" ]; then
+                log_ok "pyrometer (git exists)"
+            elif git clone --quiet --depth 1 https://github.com/nascentxyz/pyrometer.git "$pyro_dir" 2>/dev/null; then
+                (cd "$pyro_dir" && cargo build --release 2>/dev/null) || true
+                log_ok "pyrometer (via git)"
+            else
+                log_fail "pyrometer — compilation failed (niche tool, optional)"
+            fi
+        fi
+    fi
+
+    # === Solidity Coverage ===
+    TOTAL=$((TOTAL + 1))
+    if npm list -g solidity-coverage &>/dev/null 2>&1; then
+        log_exists "solidity-coverage"
+    else
+        log_install "solidity-coverage"
+        if command -v npm &>/dev/null && npm install -g solidity-coverage 2>/dev/null; then
+            log_ok "solidity-coverage"
+        else
+            log_fail "solidity-coverage"
+        fi
+    fi
+
+    echo ""
+    echo -e "  ${CYAN}Web3 Quick Start:${NC}"
+    echo -e "    forge init my-audit && cd my-audit"
+    echo -e "    slither . --json -                  # Static analysis"
+    echo -e "    forge test --fork-url https://mainnet.base.org -vvvv  # Fork test"
+    echo -e "    cast block-number --rpc-url https://mainnet.base.org  # Chain query"
+}
+
+# ============================================================================
 # WORDLISTS
 # ============================================================================
 
@@ -851,7 +1114,7 @@ usage() {
     echo "Usage: $0 [OPTION]"
     echo ""
     echo "Options:"
-    echo "  --all          Install ALL 158 tools (Go + Python + System + Git + Rust + NPM + Ruby + OPSEC + Wordlists)"
+    echo "  --all          Install ALL 183 tools (Go + Python + System + Git + Rust + NPM + Ruby + OPSEC + Web3 + Wordlists)"
     echo "  --essentials   Quick start: 10 essential tools (subfinder, httpx, nuclei, ffuf, etc.)"
     echo "  --go           Install Go tools only (52 tools)"
     echo "  --python       Install Python tools only (32 tools)"
@@ -859,9 +1122,10 @@ usage() {
     echo "  --git          Install git-based tools only (22 tools)"
     echo "  --rust         Install Rust tools only (3 tools)"
     echo "  --npm          Install NPM tools only (2 tools)"
+    echo "  --web3         Install Web3/smart contract auditing tools (25 tools: Foundry, Slither, Echidna, etc.)"
     echo "  --opsec        Install OPSEC/anonymization tools (ProtonVPN, proxychains, SpoofMAC, macchanger)"
     echo "  --wordlists    Install wordlists only (SecLists, PayloadsAllTheThings, etc.)"
-    echo "  --check        Audit — check which of 158 tools are installed"
+    echo "  --check        Audit — check which of 183 tools are installed"
     echo "  --help         Show this help message"
     echo ""
 }
@@ -872,7 +1136,7 @@ main() {
     echo -e "${BOLD}${BLUE}"
     echo "  ╔═══════════════════════════════════════╗"
     echo "  ║       hack-ai-v2 Tool Installer       ║"
-    echo "  ║         158 Security Tools            ║"
+    echo "  ║    183 Security + Web3 Audit Tools    ║"
     echo "  ╚═══════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "  OS: $OS | Go: $(go version 2>/dev/null | awk '{print $3}' || echo 'not found')"
@@ -890,7 +1154,12 @@ main() {
             install_ruby_tools
             install_binary_tools
             install_opsec_tools
+            install_web3_tools
             install_wordlists
+            print_summary
+            ;;
+        --web3)
+            install_web3_tools
             print_summary
             ;;
         --opsec)

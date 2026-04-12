@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================================
 # hack-ai-v2 — Tool Health Check
-# Verifies all 150 security tools are installed AND working correctly
+# Verifies all 183 security tools are installed AND working correctly
 # Usage: bash scripts/check_tools.sh [--category <name>] [--json] [--verbose]
 # ============================================================================
 
@@ -126,6 +126,8 @@ get_binary_name() {
         android_emulator) echo "__dir_check__" ;;
         sdkmanager)       echo "__dir_check__" ;;
         avdmanager)       echo "__dir_check__" ;;
+        4naly3er)         echo "__dir_check__" ;;
+        solidity-coverage) echo "__dir_check__" ;;
         *)                echo "$name" ;;
     esac
 }
@@ -165,6 +167,17 @@ get_verify_override() {
         android_emulator) echo "emulator -version 2>&1 | head -1 || ls $ANDROID_SDK/emulator/emulator 2>/dev/null" ;;
         sdkmanager)       echo "sdkmanager --version 2>&1 | head -1 || ls $ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager 2>/dev/null" ;;
         avdmanager)       echo "avdmanager list avd 2>&1 | head -1 || ls $ANDROID_SDK/cmdline-tools/latest/bin/avdmanager 2>/dev/null" ;;
+        foundry)          echo "forge --version 2>&1" ;;
+        stellar-cli)      echo "stellar --version 2>&1 || soroban --version 2>&1" ;;
+        cargo-fuzz)       echo "cargo fuzz --version 2>&1" ;;
+        cargo-audit)      echo "cargo-audit --version 2>&1 || cargo audit --version 2>&1" ;;
+        miri)             echo "rustup +nightly component list 2>/dev/null | grep 'miri.*installed'" ;;
+        clippy)           echo "cargo clippy --version 2>&1" ;;
+        4naly3er)         echo "ls $TOOLS_DIR/4naly3er/src/index.ts 2>/dev/null" ;;
+        solidity-coverage) echo "npm list -g solidity-coverage 2>/dev/null | grep solidity-coverage" ;;
+        wabt)             echo "wasm-decompile --version 2>&1" ;;
+        difftastic)       echo "difft --version 2>&1" ;;
+        mythril)          echo "myth version 2>&1" ;;
         *)                echo "" ;;
     esac
 }
@@ -386,7 +399,7 @@ usage() {
     echo "Options:"
     echo "  --category <name>   Check only a specific category"
     echo "                      (auth, cloud, exploit, mobile, network, proxy,"
-    echo "                       recon, secrets, utility, web)"
+    echo "                       recon, secrets, utility, web, web3)"
     echo "  --json              Output results as JSON"
     echo "  --verbose           Show full verify output"
     echo "  --help              Show this help message"
@@ -415,7 +428,7 @@ main() {
         echo -e "${BOLD}${BLUE}"
         echo "  ╔═══════════════════════════════════════╗"
         echo "  ║     hack-ai-v2 Tool Health Check      ║"
-        echo "  ║       150 Security Tools Audit        ║"
+        echo "  ║    183 Security + Web3 Tools Audit    ║"
         echo "  ╚═══════════════════════════════════════╝"
         echo -e "${NC}"
 
