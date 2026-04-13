@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/samrudh/hack-ai-v2/internal/types"
+	"github.com/samrudh/hack-ai-v2/internal/workspace"
 )
 
 // ============================================================================
@@ -36,6 +38,24 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 	e.mu.Lock()
 	e.program = slug
 	e.mu.Unlock()
+
+	// -----------------------------------------------------------
+	// Create/verify workspace directory under bounties/
+	// This is the filesystem workspace that execute_hunting_script
+	// and other sandbox tools depend on.
+	// -----------------------------------------------------------
+	wsMgr := workspace.NewManager(e.config.Config.Workspace.BaseDir)
+	ws, err := wsMgr.Get(slug)
+	if err != nil {
+		// Workspace doesn't exist yet — create it
+		ws, err = wsMgr.Create(slug)
+		if err != nil {
+			return errorResult(fmt.Sprintf("Failed to create workspace for '%s': %v", slug, err)), nil
+		}
+		log.Printf("[SET_PROGRAM] Created new workspace at %s", ws.Path)
+	} else {
+		log.Printf("[SET_PROGRAM] Using existing workspace at %s", ws.Path)
+	}
 
 	// Build program object
 	program := &types.BountyProgram{
@@ -79,6 +99,7 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 	}
 
 	// Persist to MongoDB
+	mongoStatus := "⚠️ MongoDB not configured"
 	if e.config.MongoDB != nil {
 		// Check if program already exists
 		existing, _ := e.config.MongoDB.GetProgram(ctx, slug)
@@ -93,11 +114,13 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 				existing.URL = url
 			}
 			e.config.MongoDB.SaveProgram(ctx, existing)
-			return successResult(fmt.Sprintf("🎯 Switched to existing program: %s\n- Platform: %s\n- Status: active\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, slug)), nil
+			return successResult(fmt.Sprintf("🎯 Switched to existing program: %s\n- Platform: %s\n- Status: active\n- Workspace: %s\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, ws.Path, slug)), nil
 		}
 
 		if err := e.config.MongoDB.SaveProgram(ctx, program); err != nil {
-			return errorResult(fmt.Sprintf("Failed to save program: %v", err)), nil
+			mongoStatus = fmt.Sprintf("⚠️ MongoDB save failed: %v", err)
+		} else {
+			mongoStatus = "✅"
 		}
 	}
 
@@ -106,10 +129,11 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 - Name: %s
 - Platform: %s
 - Status: active
-- Saved to MongoDB: ✅
+- Workspace: %s
+- Saved to MongoDB: %s
 
 All findings, sessions, and tool runs will now be tagged with program: "%s"
-Use set_target to set the target domain.`, slug, name, platform, slug)), nil
+Use set_target to set the target domain.`, slug, name, platform, ws.Path, mongoStatus, slug)), nil
 }
 
 func (e *Engine) handleListPrograms(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
