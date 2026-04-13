@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -57,7 +58,12 @@ func (e *Engine) handleExecuteHuntingScript(ctx context.Context, args map[string
 	wsMgr := workspace.NewManager(e.config.Config.Workspace.BaseDir)
 	ws, err := wsMgr.Get(program)
 	if err != nil {
-		return errorResult(fmt.Sprintf("❌ Workspace not found for program '%s': %v\nCall set_program to create it.", program, err)), nil
+		// Auto-create workspace if it doesn't exist (handles race with set_program)
+		ws, err = wsMgr.Create(program)
+		if err != nil {
+			return errorResult(fmt.Sprintf("❌ Failed to create workspace for program '%s': %v", program, err)), nil
+		}
+		log.Printf("[SANDBOX] Auto-created workspace for '%s' at %s", program, ws.Path)
 	}
 
 	// Execute in sandbox
