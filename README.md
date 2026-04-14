@@ -69,6 +69,7 @@ cp config/config.example.yaml config/config.yaml
 ./scripts/install_tools.sh --go           # 52 Go-based tools
 ./scripts/install_tools.sh --python       # 32 Python tools
 ./scripts/install_tools.sh --system       # 24 brew/apt tools
+./scripts/install_tools.sh --web3         # 25 smart contract auditing tools
 ./scripts/install_tools.sh --opsec        # VPN + MAC spoof tools
 
 # Verify what is installed
@@ -305,7 +306,7 @@ Each program gets an isolated workspace:
 
 ---
 
-## Tool Arsenal (160 Tools)
+## Tool Arsenal (183 Tools)
 
 ### Recon (58)
 subfinder, amass, findomain, chaos, httpx, httprobe, katana, gospider, hakrawler, meg, gau, waybackurls, dnsx, shuffledns, puredns, massdns, naabu, masscan, nmap, rustscan, arjun, paramspider, kiterunner, linkfinder, getjs, gowitness, eyewitness, shodan, censys, uncover, alterx, dnsgen, gotator, dnstwist, assetfinder, asnmap, tlsx, wafw00f, whatweb, theharvester, reconftw, fierce, dnsrecon, knockpy, unfurl, gf, anew, gron, qsreplace
@@ -327,6 +328,36 @@ prowler, scoutsuite, s3scanner, cloudenum
 
 ### Mobile Security (12)
 adb, android_emulator, frida, objection, apktool, jadx, drozer, mobsf, sdkmanager, avdmanager, apkeep, ipatool
+
+### Web3 / Smart Contract Security (25)
+foundry (forge, cast, anvil, chisel), slither, mythril, halmos, echidna, medusa, surya, solidity-metrics, solidity-coverage, aderyn, 4naly3er, pyrometer, tenderly, stellar-cli, cargo-fuzz, cargo-audit, cargo-clippy, miri, difftastic, wabt, wasm-tools, solc-select
+
+> Install with `./scripts/install_tools.sh --web3`
+>
+> | Tool | Purpose |
+> |---|---|
+> | foundry | EVM dev toolkit — forge (tests), cast (calldata), anvil (local chain), chisel (REPL) |
+> | slither | Fast Solidity static analyzer — detects reentrancy, integer overflow, access control issues |
+> | mythril | Symbolic execution engine for EVM bytecode — finds deep logic bugs |
+> | halmos | Formal verification via bounded model checking (Foundry-compatible) |
+> | echidna | Property-based fuzzer for Solidity — writes invariant-breaking inputs |
+> | medusa | Parallel fuzzer with corpus re-use; faster than Echidna on large codebases |
+> | surya | Solidity code visualizer — call graphs, inheritance diagrams, function summaries |
+> | solidity-metrics | Complexity and SLOC metrics for audit scoping |
+> | solidity-coverage | Istanbul-style branch coverage for Hardhat/Truffle suites |
+> | aderyn | Rust-based Solidity analyzer built for Code4rena/Immunefi report generation |
+> | 4naly3er | C4 automated finding generator — produces `4naly3er-report.md` |
+> | pyrometer | Range-based static analysis for Solidity — catches arithmetic edge cases |
+> | tenderly | Transaction simulation and contract debugging via Tenderly CLI |
+> | stellar-cli | Soroban smart contract deploy, invoke, and test (Stellar/Rust targets) |
+> | cargo-fuzz | libFuzzer harness for Rust contracts — mutation-based fuzzing |
+> | cargo-audit | Checks Rust dependency tree against RustSec advisory database |
+> | cargo-clippy | Rust linter — catches unsafe patterns and logic warnings |
+> | miri | Rust undefined-behavior detector running under the MIR interpreter |
+> | difftastic | Structural diff tool — highlights AST-level changes instead of line diffs |
+> | wabt | WebAssembly Binary Toolkit — disassemble, validate, and convert WASM modules |
+> | wasm-tools | Component-model toolchain for WASM/Soroban contract inspection |
+> | solc-select | Solidity compiler version manager (required by Slither and Mythril) |
 
 ### OPSEC (4)
 protonvpn-cli, proxychains-ng, spoofmac, macchanger
