@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -177,6 +178,14 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
+	}
+	// Pin the workspace base_dir to an absolute ./bounties instead of silently
+	// falling back to ~/bounty-programs (which split workspaces across two
+	// locations and put them outside the project where the session can't write).
+	if c.Workspace.BaseDir == "" {
+		if abs, err := filepath.Abs("bounties"); err == nil {
+			c.Workspace.BaseDir = abs
+		}
 	}
 	if len(c.Reporting.Formats) == 0 {
 		c.Reporting.Formats = []string{"json", "markdown"}
