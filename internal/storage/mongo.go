@@ -30,10 +30,20 @@ const (
 	CollectionPrograms         = "programs"
 	CollectionScriptExecutions = "script_executions"
 	CollectionVectorStatuses   = "vector_statuses"
+
+	// v2 review pipeline collections
+	CollectionReviews        = "reviews"         // adversarial panel reviews
+	CollectionTriageOutcomes = "triage_outcomes" // real-world submission verdicts (the feedback loop)
+	CollectionLessons        = "lessons"         // curated FP-class / mistake grounding
+	CollectionHypotheses     = "hypotheses"      // director-proposed untried attack ideas
 )
 
-// NewMongoClient creates a new MongoDB client
-func NewMongoClient(ctx context.Context, uri string) (*MongoClient, error) {
+// NewMongoClient creates a new MongoDB client. dbName selects the database;
+// if empty it falls back to "hack_ai_v2".
+func NewMongoClient(ctx context.Context, uri, dbName string) (*MongoClient, error) {
+	if dbName == "" {
+		dbName = "hack_ai_v2"
+	}
 	clientOptions := options.Client().ApplyURI(uri).SetConnectTimeout(5 * time.Second)
 
 	client, err := mongo.Connect(ctx, clientOptions)
@@ -48,7 +58,7 @@ func NewMongoClient(ctx context.Context, uri string) (*MongoClient, error) {
 
 	mc := &MongoClient{
 		client:   client,
-		database: client.Database("hack_ai_v2"),
+		database: client.Database(dbName),
 	}
 
 	// Create indexes for performance
@@ -92,6 +102,23 @@ func (m *MongoClient) EnsureIndexes(ctx context.Context) {
 		CollectionVectorStatuses: {
 			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "vector_id", Value: 1}}},
 			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "state", Value: 1}}},
+		},
+		CollectionReviews: {
+			{Keys: bson.D{{Key: "finding_id", Value: 1}, {Key: "round", Value: 1}}},
+			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "timestamp", Value: -1}}},
+		},
+		CollectionTriageOutcomes: {
+			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "recorded_at", Value: -1}}},
+			{Keys: bson.D{{Key: "state", Value: 1}}},
+			{Keys: bson.D{{Key: "finding_id", Value: 1}}},
+		},
+		CollectionLessons: {
+			{Keys: bson.D{{Key: "program", Value: 1}}},
+			{Keys: bson.D{{Key: "vuln_type", Value: 1}}},
+			{Keys: bson.D{{Key: "fp_class", Value: 1}}},
+		},
+		CollectionHypotheses: {
+			{Keys: bson.D{{Key: "program", Value: 1}, {Key: "created_at", Value: -1}}},
 		},
 	}
 
