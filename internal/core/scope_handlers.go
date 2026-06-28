@@ -53,6 +53,9 @@ func (e *Engine) handleSetTarget(ctx context.Context, args map[string]interface{
 	}
 	e.mu.Unlock()
 
+	// Make this scope authoritative for enforcement.
+	e.setActiveScope(types.Scope{InScope: inScope, OutOfScope: outOfScope})
+
 	// Persist session to MongoDB
 	if e.config.MongoDB != nil {
 		e.config.MongoDB.SaveSession(ctx, e.session)
@@ -76,23 +79,20 @@ func (e *Engine) handleValidateScope(ctx context.Context, args map[string]interf
 		return errorResult("target is required"), nil
 	}
 
-	e.mu.RLock()
-	session := e.session
-	e.mu.RUnlock()
-
-	if session == nil {
-		return errorResult("No target set. Use set_target first."), nil
+	scope := e.activeScope()
+	if len(scope.InScope) == 0 && len(scope.OutOfScope) == 0 {
+		return errorResult("No scope set. Use set_program (with in_scope/out_of_scope) or set_target first."), nil
 	}
 
 	inScope := false
-	for _, pattern := range session.Scope.InScope {
+	for _, pattern := range scope.InScope {
 		if matchPattern(target, pattern) {
 			inScope = true
 			break
 		}
 	}
 
-	for _, pattern := range session.Scope.OutOfScope {
+	for _, pattern := range scope.OutOfScope {
 		if matchPattern(target, pattern) {
 			inScope = false
 			break
@@ -108,33 +108,22 @@ func (e *Engine) handleValidateScope(ctx context.Context, args map[string]interf
 // validateURLScope checks if a URL is within the active session scope.
 // Returns nil if no session/scope is set (permissive when no scope defined).
 func (e *Engine) validateURLScope(rawURL string) error {
-	e.mu.RLock()
-	session := e.session
-	e.mu.RUnlock()
-
-	if session == nil || len(session.Scope.InScope) == 0 {
+	scope := e.activeScope()
+	if len(scope.InScope) == 0 {
 		return nil // No scope defined, allow all
 	}
 
-	// Extract hostname from URL
-	host := rawURL
-	if idx := strings.Index(rawURL, "://"); idx != -1 {
-		host = rawURL[idx+3:]
-	}
-	if idx := strings.Index(host, "/"); idx != -1 {
-		host = host[:idx]
-	}
-	if idx := strings.Index(host, ":"); idx != -1 {
-		host = host[:idx]
-	}
+	host, _ := splitHostPath(rawURL)
 
-	// Check against scope
-	for _, pattern := range session.Scope.InScope {
-		if matchPattern(host, pattern) {
+	// Check against scope. Pass the full rawURL (not just host) so that
+	// path-scoped entries (e.g. "example.com/testing-path/") are honored —
+	// matchPattern does its own host/path parsing on both sides.
+	for _, pattern := range scope.InScope {
+		if matchPattern(rawURL, pattern) {
 			// Not explicitly out of scope?
 			outOfScope := false
-			for _, oos := range session.Scope.OutOfScope {
-				if matchPattern(host, oos) {
+			for _, oos := range scope.OutOfScope {
+				if matchPattern(rawURL, oos) {
 					outOfScope = true
 					break
 				}
@@ -145,18 +134,65 @@ func (e *Engine) validateURLScope(rawURL string) error {
 		}
 	}
 
-	return fmt.Errorf("❌ %s is OUT OF SCOPE — request blocked. Use set_target to update scope.", host)
+	return fmt.Errorf("❌ %s is OUT OF SCOPE — request blocked. Use set_program/set_target to update scope.", host)
 }
 
+// splitHostPath splits a raw URL, "host", or "host/path" string into a
+// lowercased host and a path that always starts with "/".
+func splitHostPath(raw string) (host, path string) {
+	s := strings.TrimSpace(raw)
+	if idx := strings.Index(s, "://"); idx != -1 {
+		s = s[idx+3:]
+	}
+	if idx := strings.Index(s, "/"); idx != -1 {
+		host = s[:idx]
+		path = s[idx:]
+	} else {
+		host = s
+		path = "/"
+	}
+	if idx := strings.Index(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+	if path == "" {
+		path = "/"
+	}
+	return strings.ToLower(host), path
+}
+
+// hasExplicitPath reports whether raw (a URL or "host/path" scope entry)
+// contains a path component at all, as opposed to being a bare host/wildcard.
+func hasExplicitPath(raw string) bool {
+	s := strings.TrimSpace(raw)
+	if idx := strings.Index(s, "://"); idx != -1 {
+		s = s[idx+3:]
+	}
+	return strings.Contains(s, "/")
+}
+
+// matchPattern reports whether target (a URL, bare host, or "host/path"
+// string) matches pattern (a scope entry). A "*.example.com" host pattern
+// matches any subdomain AND the apex "example.com". A pattern with no path
+// component matches the host under ANY path. A pattern that does include a
+// path (e.g. "example.com/testing-path/") additionally requires the
+// target's path to start with that pattern's path — this is what lets a
+// scope entry authorize one specific path on a host without opening up the
+// whole domain.
 func matchPattern(target, pattern string) bool {
-	if pattern == target {
-		return true
+	targetHost, targetPath := splitHostPath(target)
+	patternHost, patternPath := splitHostPath(pattern)
+
+	hostMatch := patternHost == targetHost
+	if !hostMatch && strings.HasPrefix(patternHost, "*.") {
+		apex := patternHost[2:] // "example.com"
+		hostMatch = targetHost == apex || strings.HasSuffix(targetHost, "."+apex)
 	}
-	if len(pattern) > 2 && pattern[:2] == "*." {
-		suffix := pattern[1:]
-		if len(target) > len(suffix) && target[len(target)-len(suffix):] == suffix {
-			return true
-		}
+	if !hostMatch {
+		return false
 	}
-	return false
+
+	if !hasExplicitPath(pattern) {
+		return true // host-level scope entry: any path matches
+	}
+	return strings.HasPrefix(targetPath, patternPath)
 }
