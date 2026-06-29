@@ -44,7 +44,11 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 	// This is the filesystem workspace that execute_hunting_script
 	// and other sandbox tools depend on.
 	// -----------------------------------------------------------
-	wsMgr := workspace.NewManager(e.config.Config.Workspace.BaseDir)
+	baseDir := ""
+	if e.config.Config != nil {
+		baseDir = e.config.Config.Workspace.BaseDir
+	}
+	wsMgr := workspace.NewManager(baseDir)
 	ws, err := wsMgr.Get(slug)
 	if err != nil {
 		// Workspace doesn't exist yet — create it
@@ -85,6 +89,12 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 		}
 	}
 
+	// Make the program's scope authoritative for enforcement immediately —
+	// so tools are scope-guarded even before set_target is called.
+	if len(program.Scope.InScope) > 0 || len(program.Scope.OutOfScope) > 0 {
+		e.setActiveScope(program.Scope)
+	}
+
 	// Parse payout
 	if min, ok := args["payout_min"].(float64); ok {
 		program.PayoutMin = int(min)
@@ -104,7 +114,9 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 		// Check if program already exists
 		existing, _ := e.config.MongoDB.GetProgram(ctx, slug)
 		if existing != nil {
-			// Update last_active only, keep existing data
+			// Reactivate, but don't silently discard newly-passed fields —
+			// callers legitimately need to correct/extend scope on an
+			// already-registered program.
 			existing.LastActive = time.Now()
 			existing.Status = "active"
 			if name != slug {
@@ -113,8 +125,26 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 			if url != "" {
 				existing.URL = url
 			}
+			if len(program.Scope.InScope) > 0 {
+				existing.Scope.InScope = program.Scope.InScope
+			}
+			if len(program.Scope.OutOfScope) > 0 {
+				existing.Scope.OutOfScope = program.Scope.OutOfScope
+			}
+			if program.PayoutMin > 0 {
+				existing.PayoutMin = program.PayoutMin
+			}
+			if program.PayoutMax > 0 {
+				existing.PayoutMax = program.PayoutMax
+			}
+			if program.Notes != "" {
+				existing.Notes = program.Notes
+			}
 			e.config.MongoDB.SaveProgram(ctx, existing)
-			return successResult(fmt.Sprintf("🎯 Switched to existing program: %s\n- Platform: %s\n- Status: active\n- Workspace: %s\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, ws.Path, slug)), nil
+			if len(existing.Scope.InScope) > 0 || len(existing.Scope.OutOfScope) > 0 {
+				e.setActiveScope(existing.Scope)
+			}
+			return successResult(fmt.Sprintf("🎯 Switched to existing program: %s\n- Platform: %s\n- Status: active\n- Workspace: %s\n- In Scope: %v\n- Out of Scope: %v\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, ws.Path, existing.Scope.InScope, existing.Scope.OutOfScope, slug)), nil
 		}
 
 		if err := e.config.MongoDB.SaveProgram(ctx, program); err != nil {
