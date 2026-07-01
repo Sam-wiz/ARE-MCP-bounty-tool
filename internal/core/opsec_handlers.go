@@ -16,6 +16,21 @@ func (e *Engine) handleOpsecSetup(ctx context.Context, args map[string]interface
 	var results strings.Builder
 	results.WriteString("🛡️ OPSEC Setup\n\n")
 
+	// Egress proxy — the knob that unblocks geo-restricted targets. Accepts
+	// http://, https://, socks5://[user:pass@]host:port. Once set, ALL request
+	// tools (http_request, api_test, compare_responses, discover_config) leave
+	// from this proxy's IP.
+	if proxy, ok := args["proxy"].(string); ok && proxy != "" {
+		e.setEgressProxy(proxy)
+		results.WriteString("=== Egress Proxy ===\n")
+		results.WriteString(fmt.Sprintf("Configured: %s\n", redactProxy(proxy)))
+		ipRes, _ := e.ExecuteRawCommand(ctx,
+			"curl -s"+e.curlProxyArg()+" --max-time 15 https://ifconfig.me 2>/dev/null || echo '(proxy unreachable)'",
+			"ip-check", 20)
+		results.WriteString(fmt.Sprintf("Egress IP now: %s\n", strings.TrimSpace(ipRes.Content[0].Text)))
+		results.WriteString("All request tools now egress through this proxy.\n\n")
+	}
+
 	// MAC spoofing
 	if macSpoof, ok := args["mac_spoof"].(bool); ok && macSpoof {
 		results.WriteString("=== MAC Spoofing ===\n")
@@ -53,9 +68,10 @@ func (e *Engine) handleOpsecVerify(ctx context.Context, args map[string]interfac
 	var results strings.Builder
 	results.WriteString("🛡️ OPSEC Verification\n\n")
 
-	// IP check
-	results.WriteString("=== IP Address ===\n")
-	ipResult, _ := e.ExecuteRawCommand(ctx, "curl -s ifconfig.me 2>/dev/null", "ip-check", 10)
+	// IP check — through the egress proxy the request tools actually use.
+	results.WriteString("=== Egress IP Address ===\n")
+	results.WriteString(fmt.Sprintf("Egress path: %s\n", e.egressLabel()))
+	ipResult, _ := e.ExecuteRawCommand(ctx, "curl -s"+e.curlProxyArg()+" --max-time 15 ifconfig.me 2>/dev/null", "ip-check", 20)
 	results.WriteString(ipResult.Content[0].Text)
 
 	// DNS leak check
