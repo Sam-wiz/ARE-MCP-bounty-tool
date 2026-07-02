@@ -139,7 +139,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 	// Phase 1: Probe known config paths
 	if mode == "config" || mode == "full" {
 		result.WriteString("=== Phase 1: Config File Probing ===\n")
-		client := &http.Client{Timeout: 10 * time.Second}
+		client := e.newHTTPClient(10 * time.Second)
 
 		for _, path := range configPaths {
 			url := baseURL + path
@@ -192,13 +192,13 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 	if mode == "js" || mode == "full" {
 		result.WriteString("=== Phase 2: JavaScript Analysis ===\n")
 
-		// First, get the main page and find JS files
-		jsFiles := findJSFiles(ctx, baseURL)
+		// First, get the main page and find JS files (egress via proxy)
+		jsFiles := findJSFiles(ctx, e.newHTTPClient(15*time.Second), baseURL)
 		discovery.JSFiles = jsFiles
 		result.WriteString(fmt.Sprintf("  Found %d JS files\n", len(jsFiles)))
 
 		// Analyze each JS file
-		client := &http.Client{Timeout: 15 * time.Second}
+		client := e.newHTTPClient(15 * time.Second)
 		for _, jsURL := range jsFiles {
 			if !strings.HasPrefix(jsURL, "http") {
 				jsURL = baseURL + jsURL
@@ -289,9 +289,9 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 	return successResult(result.String()), nil
 }
 
-// findJSFiles fetches the page HTML and extracts JS file URLs
-func findJSFiles(ctx context.Context, baseURL string) []string {
-	client := &http.Client{Timeout: 15 * time.Second}
+// findJSFiles fetches the page HTML and extracts JS file URLs (via the
+// supplied client, which carries any egress proxy).
+func findJSFiles(ctx context.Context, client *http.Client, baseURL string) []string {
 	resp, err := client.Get(baseURL)
 	if err != nil {
 		return nil

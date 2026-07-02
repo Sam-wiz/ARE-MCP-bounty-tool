@@ -122,6 +122,11 @@ func (e *Engine) handleRunTool(ctx context.Context, args map[string]interface{})
 		}
 	}
 
+	// Scope enforcement on any URL/host/target arg the plugin receives.
+	if err := e.validateArgsScope(pluginArgs); err != nil {
+		return errorResult(err.Error()), nil
+	}
+
 	return e.ExecutePluginFull(ctx, plugin, pluginArgs)
 }
 
@@ -130,6 +135,11 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 	url1, _ := args["url"].(string)
 	if url1 == "" {
 		return errorResult("url is required"), nil
+	}
+
+	// Scope enforcement (not just http_request).
+	if err := e.validateURLScope(url1); err != nil {
+		return errorResult(err.Error()), nil
 	}
 
 	method := "GET"
@@ -157,9 +167,9 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 	var results strings.Builder
 	results.WriteString(fmt.Sprintf("🔐 API Test: %s %s\n\n", method, url1))
 
-	// Request 1: Main request
-	cmd1 := fmt.Sprintf("curl -s -w '\\n---HTTP_CODE:%%{http_code}---' -X %s%s%s %s 2>/dev/null",
-		method, headerFlags, bodyFlag, ShellEscape(url1))
+	// Request 1: Main request (egress through the configured proxy)
+	cmd1 := fmt.Sprintf("curl -s%s -w '\\n---HTTP_CODE:%%{http_code}---' -X %s%s%s %s 2>/dev/null",
+		e.curlProxyArg(), method, headerFlags, bodyFlag, ShellEscape(url1))
 	result1, _ := e.ExecuteRawCommand(ctx, cmd1, "api-test", 30)
 	results.WriteString("=== Response ===\n")
 	results.WriteString(result1.Content[0].Text)
@@ -167,8 +177,8 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 	// If compare_url provided, do differential analysis
 	if url2, ok := args["compare_url"].(string); ok && url2 != "" {
 		results.WriteString("\n\n=== Comparison Request ===\n")
-		cmd2 := fmt.Sprintf("curl -s -w '\\n---HTTP_CODE:%%{http_code}---' -X %s%s%s %s 2>/dev/null",
-			method, headerFlags, bodyFlag, ShellEscape(url2))
+		cmd2 := fmt.Sprintf("curl -s%s -w '\\n---HTTP_CODE:%%{http_code}---' -X %s%s%s %s 2>/dev/null",
+			e.curlProxyArg(), method, headerFlags, bodyFlag, ShellEscape(url2))
 		result2, _ := e.ExecuteRawCommand(ctx, cmd2, "api-test-compare", 30)
 		results.WriteString(result2.Content[0].Text)
 
@@ -239,8 +249,8 @@ func (e *Engine) handleHTTPRequest(ctx context.Context, args map[string]interfac
 		method = strings.ToUpper(m)
 	}
 
-	// Check if URL returns actual data
-	client := &http.Client{Timeout: 15 * time.Second}
+	// Check if URL returns actual data (egress through the configured proxy)
+	client := e.newHTTPClient(15 * time.Second)
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return errorResult(fmt.Sprintf("Invalid request: %v", err)), nil

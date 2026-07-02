@@ -72,6 +72,14 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 		return errorResult("url1 and url2 are required"), nil
 	}
 
+	// Scope enforcement on both targets.
+	if err := e.validateURLScope(url1); err != nil {
+		return errorResult(err.Error()), nil
+	}
+	if err := e.validateURLScope(url2); err != nil {
+		return errorResult(err.Error()), nil
+	}
+
 	method := "GET"
 	if m, ok := args["method"].(string); ok {
 		method = strings.ToUpper(m)
@@ -91,13 +99,14 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 
 	body, _ := args["body"].(string)
 
-	// Capture both responses
-	resp1, err := captureResponse(ctx, method, url1, headers, auth1, body)
+	// Capture both responses (egress through the configured proxy)
+	client := e.newHTTPClient(30 * time.Second)
+	resp1, err := captureResponse(ctx, client, method, url1, headers, auth1, body)
 	if err != nil {
 		return errorResult(fmt.Sprintf("Request 1 failed: %v", err)), nil
 	}
 
-	resp2, err := captureResponse(ctx, method, url2, headers, auth2, body)
+	resp2, err := captureResponse(ctx, client, method, url2, headers, auth2, body)
 	if err != nil {
 		return errorResult(fmt.Sprintf("Request 2 failed: %v", err)), nil
 	}
@@ -190,8 +199,9 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 	return successResult(result.String()), nil
 }
 
-// captureResponse performs an HTTP request and captures the full response
-func captureResponse(ctx context.Context, method, url string, headers map[string]string, auth string, body string) (*ResponseCapture, error) {
+// captureResponse performs an HTTP request and captures the full response,
+// using the supplied client (which carries any egress proxy).
+func captureResponse(ctx context.Context, client *http.Client, method, url string, headers map[string]string, auth string, body string) (*ResponseCapture, error) {
 	var bodyReader io.Reader
 	if body != "" {
 		bodyReader = strings.NewReader(body)
@@ -208,8 +218,6 @@ func captureResponse(ctx context.Context, method, url string, headers map[string
 	if auth != "" {
 		req.Header.Set("Authorization", auth)
 	}
-
-	client := &http.Client{Timeout: 30 * time.Second}
 	start := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
