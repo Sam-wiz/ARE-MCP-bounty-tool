@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/samrudh/hack-ai-v2/internal/config"
+	"github.com/samrudh/hack-ai-v2/internal/director"
+	"github.com/samrudh/hack-ai-v2/internal/reviewer"
 	"github.com/samrudh/hack-ai-v2/internal/storage"
 	"github.com/samrudh/hack-ai-v2/internal/types"
 )
@@ -29,7 +32,11 @@ type Engine struct {
 	findings map[string]*types.Finding
 	workers  map[string]*Worker
 	plugins  *PluginRegistry
-	mu       sync.RWMutex
+	reviewer       *reviewer.Reviewer
+	director       *director.Director
+	scope          types.Scope // authoritative active scope (set by set_program AND set_target)
+	egressProxyURL string      // runtime egress proxy (set via opsec_setup); overrides env/config
+	mu             sync.RWMutex
 }
 
 // Worker represents an autonomous worker
@@ -50,6 +57,8 @@ func NewEngine(config EngineConfig) *Engine {
 		findings: make(map[string]*types.Finding),
 		workers:  make(map[string]*Worker),
 		plugins:  NewPluginRegistry(),
+		reviewer: reviewer.New(),
+		director: director.New(),
 	}
 
 	// Load plugins
@@ -164,11 +173,31 @@ func (e *Engine) ExecuteTool(ctx context.Context, name string, args map[string]i
 	case "test_websocket":
 		return e.handleTestWebSocket(ctx, args)
 
+	// Wireless attack chain
+	case "wifi_attack":
+		return e.handleWifiAttack(ctx, args)
+
 	// Sandbox execution
 	case "execute_hunting_script":
 		return e.handleExecuteHuntingScript(ctx, args)
 	case "log_vector_status":
 		return e.handleLogVectorStatus(ctx, args)
+
+	// v2 review pipeline
+	case "precheck_finding":
+		return e.handlePrecheckFinding(ctx, args)
+	case "review_report":
+		return e.handleReviewReport(ctx, args)
+	case "request_horizon":
+		return e.handleRequestHorizon(ctx, args)
+	case "log_triage_outcome":
+		return e.handleLogTriageOutcome(ctx, args)
+	case "mark_submit_ready":
+		return e.handleMarkSubmitReady(ctx, args)
+	case "record_lesson":
+		return e.handleRecordLesson(ctx, args)
+	case "review_stats":
+		return e.handleReviewStats(ctx, args)
 
 	default:
 		// Try plugin
@@ -223,7 +252,46 @@ func (e *Engine) GetProgram() string {
 	return e.program
 }
 
-// logDecision logs a tool execution decision to MongoDB
+// setActiveScope records the authoritative scope for enforcement.
+func (e *Engine) setActiveScope(s types.Scope) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.scope = s
+}
+
+// activeScope returns the scope to enforce against: the engine-level scope
+// (set by set_program or set_target) with the session scope as a fallback.
+func (e *Engine) activeScope() types.Scope {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if len(e.scope.InScope) > 0 || len(e.scope.OutOfScope) > 0 {
+		return e.scope
+	}
+	if e.session != nil {
+		return e.session.Scope
+	}
+	return types.Scope{}
+}
+
+// validateArgsScope enforces scope on any URL/host-bearing argument a tool
+// receives. Used by the request tools so scope is not enforced on http_request
+// alone.
+func (e *Engine) validateArgsScope(args map[string]interface{}) error {
+	for _, k := range []string{"url", "url1", "url2", "target", "domain", "host", "endpoint"} {
+		if v, ok := args[k].(string); ok && v != "" {
+			if err := e.validateURLScope(v); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// logDecision logs a tool execution decision to MongoDB. When the caller
+// includes optional "reasoning"/"thinking"/"context" arguments alongside the
+// tool's real arguments, they are captured into the decision so the WHY of each
+// action is recorded (the engine cannot otherwise see the model's rationale —
+// MCP only delivers {name, arguments}).
 func (e *Engine) logDecision(ctx context.Context, toolName string, args map[string]interface{}) {
 	argsJSON, _ := json.Marshal(args)
 
@@ -235,11 +303,26 @@ func (e *Engine) logDecision(ctx context.Context, toolName string, args map[stri
 		Action:    "tool_call",
 		ToolUsed:  toolName,
 		ToolArgs:  string(argsJSON),
+		Reasoning: metaArg(args, "reasoning", "why"),
+		Thinking:  metaArg(args, "thinking"),
+		Context:   metaArg(args, "context"),
 	}
 
 	if err := e.config.MongoDB.LogDecision(ctx, decision); err != nil {
 		log.Printf("Failed to log decision: %v", err)
 	}
+}
+
+// metaArg returns the first non-empty string value among the given keys.
+func metaArg(args map[string]interface{}, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := args[k].(string); ok {
+			if s := strings.TrimSpace(v); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }
 
 func (e *Engine) getSessionID() string {
