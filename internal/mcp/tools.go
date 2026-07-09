@@ -299,10 +299,14 @@ func (s *Server) registerTools() {
 		// === OPSEC ===
 		{
 			Name:        "opsec_setup",
-			Description: "Setup OPSEC layer: proxy chains, MAC spoofing, VPN/Tor. Run before aggressive testing.",
+			Description: "Setup OPSEC layer. Set 'proxy' to route ALL request tools (http_request, api_test, compare_responses, discover_config) through an egress proxy — use this to unblock geo-restricted targets (e.g. a US proxy for US-only assets). Also supports MAC spoofing, VPN/Tor.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
+					"proxy": map[string]interface{}{
+						"type":        "string",
+						"description": "Egress proxy URL applied to all request tools: http://host:port, https://host:port, or socks5://[user:pass@]host:port. This is the fix for geo-blocked targets.",
+					},
 					"proxy_chain": map[string]interface{}{
 						"type":        "array",
 						"description": "Proxy chain configuration",
@@ -852,6 +856,172 @@ func (s *Server) registerTools() {
 					},
 				},
 				"required": []string{"vector_id", "state", "rationale"},
+			},
+		},
+
+		// === V2 REVIEW PIPELINE ===
+		{
+			Name: "precheck_finding",
+			Description: "Cheap deterministic pre-filter (NO LLM). Run BEFORE review_report to save tokens/time. " +
+				"Hard-disqualifies out-of-scope and own-duplicate findings; warns on known false-positive classes " +
+				"(public client keys, missing-header-only, self-XSS, spec-nitpicks); checks report completeness; " +
+				"and scores value (payout × severity). review_report also runs this first and skips the panel if disqualified.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"finding_id":  map[string]interface{}{"type": "string", "description": "Stored finding to load, or use inline fields."},
+					"title":       map[string]interface{}{"type": "string"},
+					"description": map[string]interface{}{"type": "string"},
+					"severity":    map[string]interface{}{"type": "string"},
+					"vuln_type":   map[string]interface{}{"type": "string"},
+					"target":      map[string]interface{}{"type": "string"},
+					"url":         map[string]interface{}{"type": "string"},
+					"poc":         map[string]interface{}{"type": "string"},
+					"evidence":    map[string]interface{}{"type": "string"},
+					"program":     map[string]interface{}{"type": "string", "description": "Defaults to active program."},
+				},
+			},
+		},
+		{
+			Name: "review_report",
+			Description: "Run the adversarial reviewer panel (OpenAI + NVIDIA models) over a candidate finding BEFORE submitting. " +
+				"The panel are hostile triagers whose default is to REJECT — they raise the evidentiary bar with falsifiable evidence-demands. " +
+				"Returns each model's verdict plus a conservative aggregate for YOU to arbitrate (you hold the most context). " +
+				"Never auto-advances to submit-ready. Provide a finding_id (loaded from storage) OR inline finding fields.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"finding_id":    map[string]interface{}{"type": "string", "description": "ID of a stored finding to hydrate from MongoDB. Optional if inline fields are given."},
+					"title":         map[string]interface{}{"type": "string", "description": "Finding title (if not using finding_id)."},
+					"description":   map[string]interface{}{"type": "string", "description": "What the vulnerability is and why it matters."},
+					"severity":      map[string]interface{}{"type": "string", "description": "Claimed severity (critical/high/medium/low/info)."},
+					"vuln_type":     map[string]interface{}{"type": "string", "description": "Vulnerability class (idor, ssrf, cors, auth-bypass, ...). Used to pull matching lessons."},
+					"target":        map[string]interface{}{"type": "string", "description": "Affected asset/host."},
+					"url":           map[string]interface{}{"type": "string", "description": "Affected URL/endpoint."},
+					"poc":           map[string]interface{}{"type": "string", "description": "Reproduction steps / request / curl demonstrating the issue."},
+					"evidence":      map[string]interface{}{"type": "string", "description": "What was actually observed end-to-end (the proof of impact)."},
+					"program":       map[string]interface{}{"type": "string", "description": "Program slug (defaults to active program)."},
+					"program_scope": map[string]interface{}{"type": "string", "description": "Optional scope/rules override; otherwise loaded from the program record."},
+				},
+			},
+		},
+		{
+			Name: "request_horizon",
+			Description: "Ask the Director (a strong model) for NEW, untried attack hypotheses when you're stuck on the active program. " +
+				"It is fed the exploration ledger (EXHAUSTED/BLOCKED/VULNERABLE vectors) and must not repeat them. " +
+				"Output is hypotheses to TEST, not findings — each still has to pass the confirmation gate.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"notes": map[string]interface{}{"type": "string", "description": "What you've tried and why you're stuck — helps the director avoid dead ground."},
+					"max":   map[string]interface{}{"type": "number", "description": "Max hypotheses to return (default 6)."},
+				},
+			},
+		},
+		{
+			Name: "log_triage_outcome",
+			Description: "Record the REAL verdict after a finding is submitted (the feedback loop that v1 lacked). " +
+				"This is the single most valuable calibration signal — it powers review_stats and grounds future reviews. " +
+				"A rejection with a reject_reason is auto-captured as a lesson.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"finding_id":    map[string]interface{}{"type": "string", "description": "The finding this outcome is for (optional but recommended)."},
+					"program":       map[string]interface{}{"type": "string", "description": "Program slug (defaults to active program)."},
+					"platform":      map[string]interface{}{"type": "string", "description": "hackerone / bugcrowd / intigriti / independent."},
+					"platform_ref":  map[string]interface{}{"type": "string", "description": "Report id or URL on the platform."},
+					"title":         map[string]interface{}{"type": "string", "description": "Finding title."},
+					"vuln_type":     map[string]interface{}{"type": "string", "description": "Vulnerability class."},
+					"severity":      map[string]interface{}{"type": "string", "description": "Severity."},
+					"state":         map[string]interface{}{"type": "string", "enum": []string{"ACCEPTED", "DUPLICATE", "INFORMATIONAL", "NOT_APPLICABLE", "PENDING"}, "description": "The triager's verdict."},
+					"reward_amount": map[string]interface{}{"type": "number", "description": "Bounty paid (0 if none)."},
+					"currency":      map[string]interface{}{"type": "string", "description": "Currency (default USD when reward > 0)."},
+					"reject_reason": map[string]interface{}{"type": "string", "description": "Why it was closed NA/dup/info — becomes a durable lesson."},
+					"notes":         map[string]interface{}{"type": "string", "description": "Any extra context."},
+				},
+				"required": []string{"state"},
+			},
+		},
+		{
+			Name: "mark_submit_ready",
+			Description: "Human-gated: advance a finding to SUBMIT_READY. Requires human_confirm=true. " +
+				"Without confirmation it logs an approval request and refuses to advance — you cannot self-approve a submission.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"finding_id":    map[string]interface{}{"type": "string", "description": "The finding to mark ready."},
+					"human_confirm": map[string]interface{}{"type": "boolean", "description": "Must be true, and only after a human has explicitly approved."},
+					"note":          map[string]interface{}{"type": "string", "description": "Context for the approval record."},
+				},
+				"required": []string{"finding_id"},
+			},
+		},
+		{
+			Name:        "record_lesson",
+			Description: "Manually capture a durable lesson / false-positive class for reviewer grounding (e.g. 'Braintree tokenization keys are public by design').",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"lesson":    map[string]interface{}{"type": "string", "description": "The guidance to remember."},
+					"program":   map[string]interface{}{"type": "string", "description": "Scope to a program, or leave empty for a global lesson."},
+					"vuln_type": map[string]interface{}{"type": "string", "description": "Scope to a vuln class."},
+					"fp_class":  map[string]interface{}{"type": "string", "description": "Short slug, e.g. public-client-key, unexploited-cors, spec-nitpick."},
+				},
+				"required": []string{"lesson"},
+			},
+		},
+		{
+			Name:        "review_stats",
+			Description: "Show the REAL scoreboard computed from triage outcomes (accept rate, total reward, breakdown by state/type) — not v1's self-labelled hit rate. Omit program for all-programs totals.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"program": map[string]interface{}{"type": "string", "description": "Program slug; omit for all programs."},
+				},
+			},
+		},
+
+		// === WIRELESS ATTACK CHAIN ===
+		{
+			Name: "wifi_attack",
+			Description: "Orchestrated WPS/WPA2 attack chain against an AP you own. " +
+				"Steps: enable monitor mode → wash WPS scan → reaver Pixie Dust → fallback brute-force (or handshake/PMKID path). " +
+				"Requires a USB Wi-Fi adapter with monitor+injection support (e.g. Alfa AWUS036NHA) plugged into Kali Linux. " +
+				"Does NOT work on macOS built-in Wi-Fi.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"interface": map[string]interface{}{
+						"type":        "string",
+						"description": "Wireless interface name before monitor mode (e.g. wlan0). Must be the USB adapter.",
+					},
+					"ssid": map[string]interface{}{
+						"type":        "string",
+						"description": "Target network name (SSID). Used to auto-detect BSSID from wash scan output.",
+					},
+					"bssid": map[string]interface{}{
+						"type":        "string",
+						"description": "Target AP MAC address (e.g. AA:BB:CC:DD:EE:FF). If omitted, auto-detected via wash scan.",
+					},
+					"channel": map[string]interface{}{
+						"type":        "number",
+						"description": "AP channel (1-13 for 2.4GHz, 36+ for 5GHz). Required when bssid is set manually.",
+					},
+					"attack": map[string]interface{}{
+						"type": "string",
+						"enum": []string{"wps_pixie", "wps_brute", "handshake", "pmkid"},
+						"description": "Attack method: " +
+							"wps_pixie=Pixie Dust then brute-force fallback (default, fastest); " +
+							"wps_brute=bully WPS brute-force; " +
+							"handshake=deauth+capture+aircrack-ng; " +
+							"pmkid=passive PMKID capture+hashcat (no deauth needed).",
+					},
+					"wordlist": map[string]interface{}{
+						"type":        "string",
+						"description": "Path to wordlist for handshake/PMKID cracking (default: /usr/share/wordlists/rockyou.txt).",
+					},
+				},
+				"required": []string{"interface"},
 			},
 		},
 	}
