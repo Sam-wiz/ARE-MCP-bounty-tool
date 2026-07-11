@@ -505,7 +505,7 @@ install_git_tools() {
 # ============================================================================
 
 install_rust_tools() {
-    log_header "Rust Tools (4)"
+    log_header "Rust Tools (5)"
 
     if ! command -v cargo &>/dev/null; then
         echo -e "  ${YELLOW}Cargo not found. Attempting brew install...${NC}"
@@ -538,10 +538,16 @@ install_rust_tools() {
             log_install "apkeep"
             cargo install apkeep 2>/dev/null && log_ok "apkeep" || log_fail "apkeep"
         fi
+
+        TOTAL=$((TOTAL + 1))
+        if command -v websocat &>/dev/null; then log_exists "websocat"; else
+            log_install "websocat"
+            cargo install websocat 2>/dev/null && log_ok "websocat" || log_fail "websocat"
+        fi
     else
         echo -e "  ${RED}Cargo still not available. Skipping Rust tools.${NC}"
-        SKIPPED=$((SKIPPED + 3))
-        TOTAL=$((TOTAL + 3))
+        SKIPPED=$((SKIPPED + 4))
+        TOTAL=$((TOTAL + 4))
     fi
 }
 

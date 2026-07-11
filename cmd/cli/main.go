@@ -150,10 +150,14 @@ func initEngine() {
 	if p := os.Getenv("HACK_AI_CONFIG"); p != "" {
 		cfgPath = p
 	}
+	config.LoadDotEnv()
 	cfg := config.LoadOrDefault(cfgPath)
 
 	if envMongo := os.Getenv("MONGODB_URI"); envMongo != "" {
 		cfg.MongoDB.URI = envMongo
+	}
+	if envDB := os.Getenv("MONGODB_DATABASE"); envDB != "" {
+		cfg.MongoDB.Database = envDB
 	}
 	if envRedis := os.Getenv("REDIS_ADDR"); envRedis != "" {
 		cfg.Redis.Addr = envRedis
@@ -161,7 +165,7 @@ func initEngine() {
 
 	ctx := context.Background()
 
-	mongoClient, err := storage.NewMongoClient(ctx, cfg.MongoDB.URI)
+	mongoClient, err := storage.NewMongoClient(ctx, cfg.MongoDB.URI, cfg.MongoDB.Database)
 	if err != nil {
 		log.Printf("MongoDB not available: %v (continuing without persistence)", err)
 		mongoClient = nil

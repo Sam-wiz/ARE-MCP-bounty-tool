@@ -28,13 +28,19 @@ func main() {
 	// Print banner
 	printBanner()
 
+	// Load .env (gitignored) before anything reads the environment.
+	config.LoadDotEnv()
+
 	// Load configuration
 	cfg := config.LoadOrDefault(getConfigPath())
-	log.Printf("Config loaded (MongoDB: %s, Redis: %s)", cfg.MongoDB.URI, cfg.Redis.Addr)
+	log.Printf("Config loaded (Redis: %s)", cfg.Redis.Addr) // never log the Mongo URI (contains creds)
 
 	// Allow env vars to override config file values
 	if envMongo := os.Getenv("MONGODB_URI"); envMongo != "" {
 		cfg.MongoDB.URI = envMongo
+	}
+	if envDB := os.Getenv("MONGODB_DATABASE"); envDB != "" {
+		cfg.MongoDB.Database = envDB
 	}
 	if envRedis := os.Getenv("REDIS_ADDR"); envRedis != "" {
 		cfg.Redis.Addr = envRedis
@@ -54,7 +60,7 @@ func main() {
 	}()
 
 	// Initialize MongoDB connection
-	mongoClient, err := storage.NewMongoClient(ctx, cfg.MongoDB.URI)
+	mongoClient, err := storage.NewMongoClient(ctx, cfg.MongoDB.URI, cfg.MongoDB.Database)
 	if err != nil {
 		log.Printf("Warning: MongoDB not available: %v", err)
 		log.Println("Continuing without decision logging...")

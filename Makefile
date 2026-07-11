@@ -1,9 +1,17 @@
-.PHONY: build build-cli test vet run clean install-tools check-tools
+.PHONY: build build-cli test vet run clean install-tools check-tools migrate migrate-force
 
 # Build both binaries (MCP server + CLI)
 build:
 	go build -o bin/hack-ai-v2 ./cmd/server/...
 	go build -o bin/hack-ai ./cmd/cli/...
+
+# Migrate the v1 mongo-export into the v2 cluster as *_v1 collections + seed
+migrate:
+	go run ./cmd/migrate
+
+# Same, but drop and re-import existing *_v1 collections
+migrate-force:
+	go run ./cmd/migrate -force
 
 # Build only the CLI wrapper
 build-cli:

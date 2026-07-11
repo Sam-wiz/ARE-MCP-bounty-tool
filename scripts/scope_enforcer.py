@@ -181,7 +181,7 @@ class ScopeEnforcer:
     def _auto_discover_scope(self) -> str:
         """Find the most recently modified scope.txt in ~/bounty-programs/."""
         home = Path.home()
-        base_dir = home / "bounty-programs"
+        base_dir = home / "bounties"
         if not base_dir.exists():
             return ""
 
