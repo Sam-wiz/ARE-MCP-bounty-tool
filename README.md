@@ -13,7 +13,7 @@ autonomous hunter usually goes wrong.
 ## TL;DR
 
 - **What:** a Go MCP server that turns any MCP-capable LLM into an autonomous bug-bounty hunter, backed by ~150 offensive security tools and MongoDB state.
-- **The twist:** every finding passes through a **deterministic pre-filter + an adversarial multi-LLM review panel + a human gate** before it can be submitted — so the engine can't spam a program with theoretical junk (which is exactly what its first version did).
+- **The control:** every finding passes through a **deterministic pre-filter + an adversarial multi-LLM review panel + a human gate** before it can be submitted — so the engine can't spam a program with theoretical junk (which is exactly what its first version did).
 - **The honest bit:** I tried to train the reviewer to *predict* accept/reject from a report's text, measured that it caps at ~48% six different ways, and redesigned around that result instead of hiding it.
 
 ---
