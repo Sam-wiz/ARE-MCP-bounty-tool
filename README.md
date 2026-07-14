@@ -1,517 +1,242 @@
-# ARE based bug bounty tool 
+# hack-ai-v2 (ARE-MCP-bounty tool)
 
-> An MCP server + CLI tool that connects any AI model to **160 security tools**, automating the full bug bounty workflow: recon → scan → finding tracking → report generation.
+An automated bug-bounty engine. It exposes a large set of security tools over the
+Model Context Protocol (MCP), and an LLM agent (Claude Code) drives them to do
+recon, probe for vulnerabilities, and write up findings. All state lives in MongoDB.
+
+The interesting part isn't the tool wrapping — it's the layer that sits *between*
+"the model thinks it found a bug" and "you submit it," because that's where an
+autonomous hunter usually goes wrong.
 
 ---
 
-## What Is This?
+## TL;DR
 
-hack-ai-v2 exposes **29 MCP tools** that any AI assistant (Claude, Copilot, Gemini, Cursor, Cline) can use to run real security tools on your machine. You describe what you want in natural language. The AI calls the right tools in sequence. Everything gets logged to MongoDB.
+- **What:** a Go MCP server that turns any MCP-capable LLM into an autonomous bug-bounty hunter, backed by ~150 offensive security tools and MongoDB state.
+- **The twist:** every finding passes through a **deterministic pre-filter + an adversarial multi-LLM review panel + a human gate** before it can be submitted — so the engine can't spam a program with theoretical junk (which is exactly what its first version did).
+- **The honest bit:** I tried to train the reviewer to *predict* accept/reject from a report's text, measured that it caps at ~48% six different ways, and redesigned around that result instead of hiding it.
 
-**Two binaries:**
-- `bin/hack-ai-v2` — MCP server (stdio JSON-RPC, for Claude Code / Cursor / Cline / Copilot)
-- `bin/hack-ai` — CLI wrapper (for terminal AIs or direct use)
+---
+
+## Why it exists
+
+The first version of this engine had a problem I could measure: over four months
+it flagged **105 attack vectors as "VULNERABLE" and earned about $0**. 
+
+It overclaimed constantly — "CONFIRMED!" for things that were theoretical — stopped
+at indicators instead of proving impact, and had no memory of what actually
+worked. The one finding that ever paid (~$1,100) wasn't even in the database.
+
+So v2 is built around a single idea: **an LLM that hunts will produce far more
+"findings" than are real, so the engine needs a gate that's skeptical by default
+and grounded in real outcomes** — not another model that's eager to agree with
+itself.
+
+---
+
+## Engineering highlights
+
+- Custom **MCP server in Go** exposing ~40 first-class tools + a plugin bridge to ~150 CLI security tools
+- **Adversarial multi-LLM review pipeline** — different models cross-check each finding as hostile triagers, aggregated by a majority-block rule
+- **Deterministic finding lifecycle** — a 12-state machine, not an ad-hoc "is it a bug?" flag
+- **Mongo-backed memory + RAG** over real historical submissions, so the reviewer learns from your actual triage outcomes
+- **Scope enforcement** at two layers — in the Go request tools *and* in a mitmproxy interceptor for sandboxed scripts, so a redirect can't wander out of scope
+- **Sandboxed Bash/Python execution** with per-program workspaces, venvs, timeouts, and proxied traffic
+- **Egress proxy layer** so all outbound testing can route through a chosen exit (geo-restricted targets)
+- **Transcript archival** of every agent session into Mongo (a growing RLHF corpus), via a Claude Code Stop hook
+- **Offline backtesting harness** that scores the reviewer against real historical verdicts
 
 ---
 
 ## Architecture
 
 ```
-AI Model (Claude / Copilot / Gemini)
-    │
-    │  stdio JSON-RPC (MCP protocol)
-    ▼
-hack-ai-v2 binary  ─────── MongoDB (audit log + findings)
-    │                       Redis  (async workers)
-    ▼
-Plugin Engine (156 YAML-defined tools)
-    │
-    ▼
-Real CLI tools: subfinder, nuclei, sqlmap, nmap, frida, ffuf...
+        ┌──────────────────────┐
+        │   LLM agent (Claude) │   drives the hunt, decides what to test
+        └──────────┬───────────┘
+                   │  MCP (JSON-RPC over stdio)
+        ┌──────────▼───────────────────────────────────────────┐
+        │            Go engine  (cmd/server)                    │
+        │                                                       │
+        │  scope/recon/http tools ── egress proxy ──► targets   │
+        │  execute_hunting_script ─ mitmproxy (scope) ─► targets │
+        │                                                       │
+        │  ┌─────────────── review pipeline ────────────────┐   │
+        │  │ precheck ─► reviewer panel ─► human gate        │   │
+        │  │ (rules)     (multi-model)     (you approve)      │   │
+        │  └──────────────────┬──────────────────────────────┘   │
+        └─────────────────────┼─────────────────────────────────┘
+                              │
+                ┌─────────────▼──────────────┐        ┌───────────────────┐
+                │   MongoDB (Atlas)          │        │  OpenAI / NVIDIA  │
+                │  findings, decisions,      │        │  reviewer panel + │
+                │  triage_outcomes, lessons, │◄──────►│  embeddings (RAG) │
+                │  reviews, transcripts      │        └───────────────────┘
+                └────────────────────────────┘
 ```
 
-Every tool call is scope-validated, logged, and tracked as part of a bounty program.
+Two binaries: `cmd/server` (the MCP server the agent talks to) and `cmd/cli`
+(local queries). Config comes from a gitignored `.env` (Mongo URI, LLM keys)
+plus `config/config.yaml`.
 
----
+### A finding, end to end
 
-## Prerequisites
-
-| Dependency | Purpose | Install |
-|---|---|---|
-| Go 1.21+ | Build the binaries | `brew install go` |
-| MongoDB Atlas or local | Findings + audit log | [atlas.mongodb.com](https://www.mongodb.com/atlas) or `brew install mongodb-community` |
-| Redis | Async workers | `brew install redis` |
-| Security tools | Actual scanning | `./scripts/install_tools.sh --all` |
-
----
-
-## Installation
-
-### 1. Clone and configure
-
-```bash
-git clone <repo-url> hack-ai-v2
-cd hack-ai-v2
-
-# Copy example config and fill in your MongoDB URI
-cp config/config.example.yaml config/config.yaml
-# Edit config/config.yaml — set mongodb_uri
 ```
-
-### 2. Install security tools
-
-```bash
-# Install all 160 tools (takes 10-20 min, requires brew + pip + go)
-./scripts/install_tools.sh --all
-
-# Or install by category
-./scripts/install_tools.sh --essentials   # Top 10 core tools
-./scripts/install_tools.sh --go           # 52 Go-based tools
-./scripts/install_tools.sh --python       # 32 Python tools
-./scripts/install_tools.sh --system       # 24 brew/apt tools
-./scripts/install_tools.sh --web3         # 25 smart contract auditing tools
-./scripts/install_tools.sh --opsec        # VPN + MAC spoof tools
-
-# Verify what is installed
-./scripts/check_tools.sh
-```
-
-### 3. Build
-
-```bash
-# Build both binaries
-make build
-
-# Output:
-#   bin/hack-ai-v2   (MCP server)
-#   bin/hack-ai      (CLI wrapper)
-```
-
-### 4. Start dependencies
-
-```bash
-brew services start redis
-# MongoDB: ensure your URI in config/config.yaml is reachable
+Claude picks a vector
+      ↓
+recon / http_request / execute_hunting_script  (scope-enforced, proxied)
+      ↓
+candidate finding
+      ↓
+precheck        → out-of-scope? own-dup? known FP-class? value score   (free, no LLM)
+      ↓
+review_report   → adversarial panel demands a real PoC; emits evidence-demands
+      ↓            (loop: go prove impact, re-review, until it clears)
+mark_submit_ready → HUMAN approves
+      ↓
+you submit → log_triage_outcome → scoreboard + auto-generated lessons
+      ↓
+future reviews retrieve this outcome (RAG) and don't repeat the mistake
 ```
 
 ---
 
-## Usage: MCP Server (Recommended)
+## The review pipeline
 
-Connect `bin/hack-ai-v2` to your AI assistant. The AI will have access to all 29 tools automatically.
+A candidate finding moves through a gated lifecycle instead of being declared
+"VULNERABLE" on the spot:
 
-### Claude Code
+```
+CANDIDATE → REPRODUCED → IMPACT_PROVEN → SURVIVED_SKEPTIC
+          → REPORT_DRAFTED → SUBMIT_READY → SUBMITTED
+          → {ACCEPTED | DUPLICATE | INFORMATIONAL | NOT_APPLICABLE}
+```
 
-Add to `~/.claude/claude_desktop_config.json`:
+---
+
+## How the pieces actually work
+
+### Sandboxed execution
+`execute_hunting_script` runs agent-written Python/Bash. It is **process-level
+isolation, not a kernel sandbox** (no seccomp/namespaces — worth being honest
+about): each program gets its own filesystem **workspace** (`cmd.Dir`), its own
+**Python venv**, a controlled **environment**, and a hard **timeout** (default
+10 min, configurable). Outbound traffic is pushed through **mitmproxy** running
+`scripts/scope_enforcer.py`, which is what actually keeps a script from talking to
+out-of-scope hosts and simultaneously captures the traffic for evidence.
+
+### Scope enforcement (two layers)
+- **In the Go tools:** every request tool (`http_request`, `api_test`,
+  `compare_responses`, discovery) validates the target host against the active
+  program scope before firing. Matching is case-insensitive and understands
+  **path-scoped entries** (`host/testing-path/`) and **apex wildcards**
+  (`*.example.com` matches subdomains *and* the apex).
+- **In the sandbox:** the mitmproxy `scope_enforcer` blocks out-of-scope requests
+  a script might make via a redirect — so `in-scope.com → 302 → evil.com` doesn't
+  quietly leave scope.
+
+### Memory / RAG
+Past triage threads are embedded with `text-embedding-3-small` and stored inline
+on the document. At review time the engine embeds the current finding and does a
+**brute-force cosine** search — **top-3** neighbors above a **0.30** similarity
+threshold — and injects those real prior verdicts into the panel prompt. No vector
+DB (see decisions below).
+
+### Data model (Mongo, ~14 collections)
+```
+findings        lifecycle state, severity, PoC, evidence, CWE/OWASP, tags
+decisions       every tool call + captured model reasoning
+reviews         each panel round: per-model verdicts + aggregate + demands
+triage_outcomes real program verdicts + reward   → the scoreboard
+lessons         auto-generated from rejections   → reviewer grounding
+triage_threads  full researcher↔triager threads + embeddings (RAG)
+transcripts     archived agent sessions (RLHF corpus)
+programs · sessions · tool_runs · vector_statuses · script_executions · hypotheses
+```
+
+---
+
+
+## A note on calibration (Jul 2026)
+
+I tried to make the reviewer *predict* whether a triager would accept or reject a
+finding, using 26 of my real Bugcrowd submissions as ground truth. It doesn't
+work, and I proved it six ways — panel aggregation, embedding similarity, a
+targeted "is the exploit demonstrated" feature, and retrieval-augmented few-shot
+all land at ~48% accuracy, and any config aggressive enough to catch the rejects
+also kills the findings that actually paid.
+
+The reason is structural: the signal separating accepted from rejected **isn't in
+the report text**. A triager decides on reproduction, program policy, and
+duplicate timing — information the classifier never sees. The result shaped the design:
+the reviewer stays a *skeptical gate* (bias toward "prove it"), and the real
+accept/reject signal comes from actually attempting the exploit, not a smarter
+classifier.
+
+---
+
+## Quick start
+
+```bash
+make build                  # → bin/hack-ai-v2 (server) + bin/hack-ai (cli)
+cp .env.example .env         # fill MONGODB_URI + OPENAI_API_KEY / NVIDIA_API_KEY
+./scripts/install_tools.sh --all      # (optional) the CLI security tools
+```
+
+Point your MCP client at `bin/hack-ai-v2`:
 
 ```json
 {
   "mcpServers": {
     "hack-ai-v2": {
-      "command": "/absolute/path/to/hack-ai-v2/bin/hack-ai-v2",
-      "args": [],
-      "env": {
-        "MONGODB_URI": "mongodb+srv://user:pass@cluster.mongodb.net/?appName=hack-ai-v2"
-      }
+      "command": "/abs/path/to/hack-ai-v2/bin/hack-ai-v2",
+      "env": { "HACK_AI_CONFIG": "/abs/path/to/hack-ai-v2/config/config.yaml" }
     }
   }
 }
 ```
 
-Or project-level — create `.mcp.json` in any project root:
+Typical session flow:
 
-```json
-{
-  "mcpServers": {
-    "hack-ai-v2": {
-      "command": "/absolute/path/to/hack-ai-v2/bin/hack-ai-v2"
-    }
-  }
-}
+```
+set_program → set_target → recon_discover / http_request / api_test / execute_hunting_script
+log_vector_status → precheck_finding → review_report → mark_submit_ready → log_triage_outcome
 ```
 
-### Cursor
+---
 
-Settings -> MCP Servers -> Add, or create `.cursor/mcp.json`:
+## Project layout
 
-```json
-{
-  "hack-ai-v2": {
-    "command": "/absolute/path/to/hack-ai-v2/bin/hack-ai-v2",
-    "env": { "MONGODB_URI": "your-uri" }
-  }
-}
+```
+cmd/
+  server/        MCP server (the thing the agent talks to)
+  cli/           local queries / stats
+  migrate/       import the v1 snapshot into the v2 cluster
+  importsubs/    load Bugcrowd exports → outcomes + lessons + RAG threads
+  embedthreads/  embed triage threads for retrieval
+  backtest/      score the reviewer against real historical verdicts
+  synclog/       Stop-hook binary that archives session transcripts to Mongo
+internal/
+  core/          engine, tool dispatch, handlers, egress proxy, scope, sandbox
+  reviewer/      adversarial multi-model panel + aggregation
+  director/      "new horizon" hypothesis generation when stuck
+  precheck/      deterministic pre-filter
+  llm/           OpenAI-compatible chat + embedding clients
+  storage/       MongoDB (findings, reviews, outcomes, lessons, transcripts …)
+  types/         finding lifecycle, panel verdicts, outcomes, lessons
+  workspace/     per-program filesystem workspace + venv
+  config/        yaml + .env loader
 ```
 
-### GitHub Copilot CLI
+---
+
+## Security tooling
+
+The engine can call ~150 CLI security tools grouped by phase (recon, web scanning,
+network, cloud, mobile, secrets, OPSEC), installed and audited via:
 
 ```bash
-# Flag
-copilot --mcp-server hack-ai-v2=/absolute/path/to/bin/hack-ai-v2
-
-# Or config: ~/.config/github-copilot/mcp.json
-{
-  "servers": {
-    "hack-ai-v2": { "command": "/absolute/path/to/bin/hack-ai-v2" }
-  }
-}
+./scripts/install_tools.sh --all       # everything
+./scripts/install_tools.sh --essentials
+./scripts/check_tools.sh               # audit what's actually working
 ```
-
-### Gemini CLI
-
-Config at `~/.gemini/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "hack-ai-v2": { "command": "/absolute/path/to/bin/hack-ai-v2" }
-  }
-}
-```
-
-### Cline (VS Code)
-
-Cline sidebar -> MCP Servers -> Configure -> add the server JSON block.
-
-### HTTP bridge (any LLM)
-
-```bash
-npx -y supergateway --port 3000 /absolute/path/to/bin/hack-ai-v2
-```
-
----
-
-## Usage: CLI Wrapper (`hack-ai`)
-
-The `hack-ai` binary wraps all 29 engine tools into shell commands — useful for terminal AIs or direct scripting.
-
-```bash
-# Optional: install globally
-sudo make install   # symlinks bin/hack-ai to /usr/local/bin/hack-ai
-```
-
-### Full hunting session example
-
-```bash
-# 1. Set the bounty program (ALWAYS do this first)
-hack-ai program set --slug shopify --platform hackerone --scope "*.shopify.com"
-
-# 2. Set and validate the target
-hack-ai target set --domain shopify.com --scope "*.shopify.com" --out-of-scope "community.shopify.com"
-
-# 3. Deep recon (runs subfinder + amass + httpx + gau + katana + nuclei)
-hack-ai recon shopify.com --mode deep
-
-# 4. Scan discovered subdomains for vulnerabilities
-hack-ai scan --targets sub1.shopify.com,sub2.shopify.com --severity critical,high
-
-# 5. Run a specific tool directly (any of 156 plugins)
-hack-ai nuclei --target https://api.shopify.com
-hack-ai sqlmap --url "https://api.shopify.com/search?q=test"
-hack-ai nmap --target 23.227.38.0 --flags "-sV -sC"
-
-# 6. Review findings
-hack-ai finding list --severity critical
-
-# 7. Generate report
-hack-ai report --format markdown --platform hackerone
-```
-
-### Full command reference
-
-```bash
-# Program & scope
-hack-ai program set --slug <slug> --platform <platform> [--scope "*.example.com"]
-hack-ai program list
-hack-ai program stats
-hack-ai target set --domain <domain> --scope "glob" [--out-of-scope "glob"]
-hack-ai target validate <url>
-
-# Recon & scanning
-hack-ai recon <domain> [--mode passive|active|deep]
-hack-ai scan --targets <t1,t2> [--severity critical,high]
-hack-ai inject --urls <u1,u2> [--types xss,sqli]
-hack-ai fuzz --target <url> [--type http|api]
-hack-ai cloud --target <t> [--provider aws|gcp|azure]
-hack-ai mobile --apk <path> [--mode static|dynamic|full]
-hack-ai download-app --platform android --package-id com.target.app [--source apkpure|google-play]
-hack-ai download-app --platform ios --package-id com.target.app --email <id> --password <pw>
-
-# Direct plugin execution (any of 156 plugins)
-hack-ai tool --name <plugin>
-hack-ai <plugin_name> --target <t>   # shorthand
-
-# HTTP & API testing
-hack-ai http --url <url> [--method GET|POST]
-hack-ai api --url <url> [--auth "Bearer xxx"] [--compare <url2>] [--no-auth]
-
-# Findings
-hack-ai finding list [--state detected|verified] [--severity critical|high]
-hack-ai finding ingest --title "XSS in search" --severity high --url <url> --type xss
-hack-ai finding validate <id>
-
-# Reporting & evidence
-hack-ai report [--format markdown|json] [--platform hackerone|bugcrowd|yeswehack]
-hack-ai evidence [--types screenshot,response] [--url <url>]
-
-# OPSEC
-hack-ai opsec setup [--tor] [--mac-spoof] [--vpn <config>]
-hack-ai opsec verify
-
-# Workers & advanced
-hack-ai worker list
-hack-ai worker stop <id>
-hack-ai compare --url1 <url> --url2 <url>
-hack-ai config-discover --target <target>
-hack-ai websocket --url <ws://url> --messages "msg1,msg2"
-```
-
----
-
-## Critical Rule: Always Set Program First
-
-> **Call `set_program` / `hack-ai program set` BEFORE doing anything else in every session.**
-
-Every scan, finding, and log entry is tagged with the active program slug. Without it, data goes nowhere — and mixing programs risks accidental out-of-scope testing, which can get you banned from platforms.
-
-Each program gets an isolated workspace:
-
-```
-~/bounty-programs/bounty-<slug>/
-├── recon/          subdomains, urls, ports, technologies
-├── findings/       raw/ and verified/
-├── evidence/       screenshots/, har/, videos/
-├── reports/        draft/ and final/
-├── notes/
-├── poc/
-├── logs/
-└── .workspace.json
-```
-
----
-
-## 29 MCP Tools Reference
-
-| Category | Tools |
-|---|---|
-| Program/scope | `set_program`, `list_programs`, `program_stats`, `set_target`, `validate_scope` |
-| Recon | `recon_discover` |
-| Scanning | `scan_vulnerabilities`, `test_injection`, `test_cloud`, `test_mobile`, `fuzz_target` |
-| Mobile download | `download_app` |
-| Direct execution | `run_tool`, `http_request`, `api_test` |
-| Findings | `ingest_result`, `validate_finding`, `get_findings`, `generate_report`, `capture_evidence` |
-| OPSEC | `opsec_setup`, `opsec_verify` |
-| Decision | `consult_human`, `log_decision`, `list_workers`, `stop_worker` |
-| Advanced | `compare_responses`, `discover_config`, `test_websocket` |
-
----
-
-## Tool Arsenal (183 Tools)
-
-### Recon (58)
-subfinder, amass, findomain, chaos, httpx, httprobe, katana, gospider, hakrawler, meg, gau, waybackurls, dnsx, shuffledns, puredns, massdns, naabu, masscan, nmap, rustscan, arjun, paramspider, kiterunner, linkfinder, getjs, gowitness, eyewitness, shodan, censys, uncover, alterx, dnsgen, gotator, dnstwist, assetfinder, asnmap, tlsx, wafw00f, whatweb, theharvester, reconftw, fierce, dnsrecon, knockpy, unfurl, gf, anew, gron, qsreplace
-
-### Web Vulnerability Scanning (36)
-nuclei, dalfox, xsstrike, sqlmap, ghauri, tplmap, commix, ssrfmap, xxeinjector, nikto, ffuf, feroxbuster, gobuster, dirsearch, wfuzz, crlfuzz, jaeles, subjack, subover, subzy, subdominator, bypass403, corsy, smuggler, nosqlmap, graphqlmap, cmsmap, joomscan, wpscan, droopescan, openredirex, shcheck, lfisuite, interactsh
-
-### Network & Infrastructure (17)
-nmap, masscan, rustscan, sslscan, sslyze, testssl, smbclient, smbmap, enum4linux, ldapsearch, crackmapexec, impacket, bloodhound, responder, tcpdump, tshark
-
-### Auth & Exploitation (7)
-hydra, hashcat, john, jwt_tool, kerbrute, metasploit, searchsploit
-
-### Secrets & Source Code (6)
-trufflehog, gitleaks, secretfinder, gitdorker, githound, gittools
-
-### Cloud Security (4)
-prowler, scoutsuite, s3scanner, cloudenum
-
-### Mobile Security (12)
-adb, android_emulator, frida, objection, apktool, jadx, drozer, mobsf, sdkmanager, avdmanager, apkeep, ipatool
-
-### Web3 / Smart Contract Security (25)
-foundry (forge, cast, anvil, chisel), slither, mythril, halmos, echidna, medusa, surya, solidity-metrics, solidity-coverage, aderyn, 4naly3er, pyrometer, tenderly, stellar-cli, cargo-fuzz, cargo-audit, cargo-clippy, miri, difftastic, wabt, wasm-tools, solc-select
-
-> Install with `./scripts/install_tools.sh --web3`
->
-> | Tool | Purpose |
-> |---|---|
-> | foundry | EVM dev toolkit — forge (tests), cast (calldata), anvil (local chain), chisel (REPL) |
-> | slither | Fast Solidity static analyzer — detects reentrancy, integer overflow, access control issues |
-> | mythril | Symbolic execution engine for EVM bytecode — finds deep logic bugs |
-> | halmos | Formal verification via bounded model checking (Foundry-compatible) |
-> | echidna | Property-based fuzzer for Solidity — writes invariant-breaking inputs |
-> | medusa | Parallel fuzzer with corpus re-use; faster than Echidna on large codebases |
-> | surya | Solidity code visualizer — call graphs, inheritance diagrams, function summaries |
-> | solidity-metrics | Complexity and SLOC metrics for audit scoping |
-> | solidity-coverage | Istanbul-style branch coverage for Hardhat/Truffle suites |
-> | aderyn | Rust-based Solidity analyzer built for Code4rena/Immunefi report generation |
-> | 4naly3er | C4 automated finding generator — produces `4naly3er-report.md` |
-> | pyrometer | Range-based static analysis for Solidity — catches arithmetic edge cases |
-> | tenderly | Transaction simulation and contract debugging via Tenderly CLI |
-> | stellar-cli | Soroban smart contract deploy, invoke, and test (Stellar/Rust targets) |
-> | cargo-fuzz | libFuzzer harness for Rust contracts — mutation-based fuzzing |
-> | cargo-audit | Checks Rust dependency tree against RustSec advisory database |
-> | cargo-clippy | Rust linter — catches unsafe patterns and logic warnings |
-> | miri | Rust undefined-behavior detector running under the MIR interpreter |
-> | difftastic | Structural diff tool — highlights AST-level changes instead of line diffs |
-> | wabt | WebAssembly Binary Toolkit — disassemble, validate, and convert WASM modules |
-> | wasm-tools | Component-model toolchain for WASM/Soroban contract inspection |
-> | solc-select | Solidity compiler version manager (required by Slither and Mythril) |
-
-### OPSEC (4)
-protonvpn-cli, proxychains-ng, spoofmac, macchanger
-
-### Utility (11)
-anew, gf, gron, qsreplace, unfurl, uro, cewl, crunch, cupp, notify, jq
-
-### Wordlists (3)
-SecLists, PayloadsAllTheThings, OneListForAll
-
----
-
-## OPSEC
-
-```bash
-./scripts/setup_opsec.sh --connect US      # ProtonVPN to US exit node
-./scripts/setup_opsec.sh --connect JP      # Switch to Japan
-./scripts/setup_opsec.sh --spoof-mac       # Randomize MAC address
-./scripts/setup_opsec.sh --full DE         # Full: MAC + Tor + VPN (Germany)
-./scripts/setup_opsec.sh --status          # Check current state
-./scripts/setup_opsec.sh --teardown        # Restore everything
-```
-
-Always run `hack-ai opsec verify` before starting a live hunt to confirm your real IP is not exposed.
-
----
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017` |
-| `REDIS_ADDR` | Redis address | `localhost:6379` |
-| `HACK_AI_CONFIG` | Config file path | `config/config.yaml` |
-
----
-
-## Adding a Plugin
-
-Tools are defined as YAML in `plugins/core/<category>/`. To add a new tool:
-
-```yaml
-name: mytool
-category: recon
-description: "Does something useful"
-install:
-  method: go
-  command: go install github.com/user/mytool@latest
-  verify: mytool --version
-execute:
-  command: "mytool {flags} {target}"
-  input:
-    target: { type: string, required: true }
-    flags:  { type: string, default: "-silent" }
-  timeout: 120
-```
-
-That's it — the tool is immediately available via `run_tool(name="mytool")` or `hack-ai mytool --target <t>`.
-
----
-
-## Makefile Targets
-
-```bash
-make build          # Build both binaries
-make build-cli      # Build only hack-ai CLI
-make test           # Run all tests
-make vet            # Run go vet
-make cover          # Tests with coverage report
-make install-tools  # Install all 160 security tools
-make check-tools    # Health check all tools
-make check-recon    # Health check recon tools only
-make check-web      # Health check web scanning tools
-make clean          # Remove build artifacts
-make ci             # vet + test + build (full pipeline)
-make install        # Install hack-ai to /usr/local/bin
-```
-
----
-
-## Project Structure
-
-```
-hack-ai-v2/
-├── cmd/
-│   ├── server/         MCP server entrypoint
-│   └── cli/            CLI wrapper entrypoint
-├── internal/
-│   ├── core/           Engine, handlers (recon/scan/api/mobile), executor
-│   ├── mcp/            MCP protocol server + tool registration
-│   ├── storage/        MongoDB + Redis clients
-│   ├── types/          Shared types
-│   └── workers/        Async background workers
-├── plugins/
-│   └── core/           YAML plugin definitions (160 tools)
-│       ├── recon/
-│       ├── scanner/
-│       ├── fuzzer/
-│       ├── exploit/
-│       ├── mobile/
-│       ├── cloud/
-│       ├── network/
-│       ├── osint/
-│       └── util/
-├── config/
-│   ├── config.example.yaml
-│   ├── opsec.yaml
-│   └── checklists/
-├── scripts/
-│   ├── install_tools.sh
-│   ├── check_tools.sh
-│   └── setup_opsec.sh
-├── bin/                (generated by make build — gitignored)
-├── Makefile
-└── go.mod
-```
-
----
-
-## Roadmap
-
-### Near Term
-- [ ] **Docker stack** — `docker compose up` brings the full stack (hack-ai-v2 + MongoDB + Redis + tools) with zero host installs
-- [ ] **Scope-specific images** — Lean containers per attack surface: `hack-ai-web`, `hack-ai-mobile`, `hack-ai-network`, `hack-ai-cloud`
-- [ ] **Tool execution optimization** — Parallel recon phases, streaming output for long-running scans, subprocess pooling
-
-### Medium Term
-- [ ] **Expanded CLI** — Interactive TUI mode, shell completions (bash/zsh/fish), real-time progress bars
-- [ ] **Plugin marketplace** — Community YAML plugins with signature verification and `hack-ai plugin install <name>`
-- [ ] **Diff-based scanning** — Track asset changes across sessions; only re-scan new/changed targets
-- [ ] **Rate limiting layer** — Per-domain request throttling and politeness controls
-
-### Longer Term
-- [ ] **Web dashboard** — React UI for findings, programs, evidence, and report generation
-- [ ] **Platform API integration** — Auto-submit verified findings to HackerOne / Bugcrowd / YesWeHack APIs
-- [ ] **Collaborative mode** — Multi-user workspaces with shared findings and RBAC
-- [ ] **Workflow templates** — Pre-built hunting flows per program type (web, API, mobile, cloud) that chain tools optimally
-
----
-
-## Sandboxed Script Execution
-
-The `execute_hunting_script` MCP tool runs agent-generated Python or Bash scripts inside a sandboxed environment with scope enforcement. All HTTP traffic is routed through mitmproxy running `scripts/scope_enforcer.py`, which blocks any requests outside the active program's scope before they reach the network.
-
-Start the proxy before using this tool:
-
-```bash
-mitmproxy -s scripts/scope_enforcer.py --listen-port 8080
-```
-
-Scripts are saved under the workspace's `tests/` directory and their full output is written to `artifacts/` as a log file. The LLM receives a smart-truncated preview (first 1000 + last 1000 chars) so it sees the HTTP status and any error traces without burning context on useless middle content.
-
----
-
-## Legal
-
-For authorized security testing only. Always obtain written permission before testing any target. Scope validation is enforced by the tool, but legal responsibility for authorized use remains with the operator.
