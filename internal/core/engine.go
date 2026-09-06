@@ -12,6 +12,7 @@ import (
 
 	"github.com/samrudh/hack-ai-v2/internal/config"
 	"github.com/samrudh/hack-ai-v2/internal/director"
+	"github.com/samrudh/hack-ai-v2/internal/oracle"
 	"github.com/samrudh/hack-ai-v2/internal/reviewer"
 	"github.com/samrudh/hack-ai-v2/internal/storage"
 	"github.com/samrudh/hack-ai-v2/internal/types"
@@ -34,8 +35,9 @@ type Engine struct {
 	plugins        *PluginRegistry
 	reviewer       *reviewer.Reviewer
 	director       *director.Director
-	scope          types.Scope // authoritative active scope (set by set_program AND set_target)
-	egressProxyURL string      // runtime egress proxy (set via opsec_setup); overrides env/config
+	oracles        *oracle.Registry // success-oracle set (M1: execution-grounded impact verification)
+	scope          types.Scope      // authoritative active scope (set by set_program AND set_target)
+	egressProxyURL string           // runtime egress proxy (set via opsec_setup); overrides env/config
 	mu             sync.RWMutex
 }
 
@@ -59,6 +61,7 @@ func NewEngine(config EngineConfig) *Engine {
 		plugins:  NewPluginRegistry(),
 		reviewer: reviewer.New(),
 		director: director.New(),
+		oracles:  oracle.DefaultRegistry(),
 	}
 
 	// Load plugins
@@ -173,6 +176,10 @@ func (e *Engine) ExecuteTool(ctx context.Context, name string, args map[string]i
 	case "test_websocket":
 		return e.handleTestWebSocket(ctx, args)
 
+	// Wireless attack chain
+	case "wifi_attack":
+		return e.handleWifiAttack(ctx, args)
+
 	// Sandbox execution
 	case "execute_hunting_script":
 		return e.handleExecuteHuntingScript(ctx, args)
@@ -184,6 +191,8 @@ func (e *Engine) ExecuteTool(ctx context.Context, name string, args map[string]i
 		return e.handlePrecheckFinding(ctx, args)
 	case "review_report":
 		return e.handleReviewReport(ctx, args)
+	case "verify_finding":
+		return e.handleVerifyFinding(ctx, args)
 	case "request_horizon":
 		return e.handleRequestHorizon(ctx, args)
 	case "log_triage_outcome":

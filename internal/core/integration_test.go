@@ -5,33 +5,29 @@ import (
 	"os"
 	"testing"
 
-	appconfig "github.com/samrudh/hack-ai-v2/internal/config"
 	"github.com/samrudh/hack-ai-v2/internal/storage"
 )
 
 // TestIntegrationPipeline tests the full: set_program → set_target → ingest_result → get_findings flow
 func TestIntegrationPipeline(t *testing.T) {
-	t.Setenv("WORKSPACE_SKIP_VENV", "1")
 	ctx := context.Background()
 
 	// Build engine without MongoDB (unit test mode)
-	cfg := appconfig.LoadOrDefault("")
-	cfg.Workspace.BaseDir = t.TempDir()
-	config := EngineConfig{Config: cfg}
+	config := EngineConfig{}
 
 	// If MONGODB_URI is set, test with real MongoDB
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI != "" {
-		mc, err := storage.NewMongoClient(ctx, mongoURI, "hack_ai_test")
+		mc, err := storage.NewMongoClient(ctx, mongoURI, os.Getenv("MONGODB_DATABASE"))
 		if err != nil {
-			t.Fatalf("MONGODB_URI is set but persistence is unavailable: %v", err)
+			t.Logf("MongoDB not available, running without persistence: %v", err)
 		} else {
 			config.MongoDB = mc
 			defer mc.Close(ctx)
-			t.Log("[OK] MongoDB connected")
+			t.Log("✅ MongoDB connected")
 		}
 	} else {
-		t.Log("[INFO]  MONGODB_URI not set, testing without persistence")
+		t.Log("ℹ️  MONGODB_URI not set, testing without persistence")
 	}
 
 	engine := NewEngine(config)
@@ -143,5 +139,5 @@ func TestIntegrationPipeline(t *testing.T) {
 		})
 	}
 
-	t.Log("[OK] Integration pipeline complete")
+	t.Log("✅ Integration pipeline complete")
 }

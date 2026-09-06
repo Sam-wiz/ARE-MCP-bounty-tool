@@ -18,19 +18,19 @@ import (
 
 // DiffResult holds the result of comparing two API responses
 type DiffResult struct {
-	URL1         string            `json:"url1"`
-	URL2         string            `json:"url2"`
-	Method       string            `json:"method"`
-	StatusCode1  int               `json:"status_code_1"`
-	StatusCode2  int               `json:"status_code_2"`
-	BodyMatch    bool              `json:"body_match"`
-	HeaderDiffs  []HeaderDiff      `json:"header_diffs,omitempty"`
-	JSONDiffs    []JSONDiff        `json:"json_diffs,omitempty"`
-	TextDiffs    []TextDiff        `json:"text_diffs,omitempty"`
-	DataLeaked   bool              `json:"data_leaked"`
-	LeakedFields []string          `json:"leaked_fields,omitempty"`
-	Severity     string            `json:"severity"`
-	Summary      string            `json:"summary"`
+	URL1         string       `json:"url1"`
+	URL2         string       `json:"url2"`
+	Method       string       `json:"method"`
+	StatusCode1  int          `json:"status_code_1"`
+	StatusCode2  int          `json:"status_code_2"`
+	BodyMatch    bool         `json:"body_match"`
+	HeaderDiffs  []HeaderDiff `json:"header_diffs,omitempty"`
+	JSONDiffs    []JSONDiff   `json:"json_diffs,omitempty"`
+	TextDiffs    []TextDiff   `json:"text_diffs,omitempty"`
+	DataLeaked   bool         `json:"data_leaked"`
+	LeakedFields []string     `json:"leaked_fields,omitempty"`
+	Severity     string       `json:"severity"`
+	Summary      string       `json:"summary"`
 }
 
 // HeaderDiff represents a difference in response headers
@@ -42,10 +42,10 @@ type HeaderDiff struct {
 
 // JSONDiff represents a difference in JSON response bodies
 type JSONDiff struct {
-	Path   string `json:"path"`
+	Path   string      `json:"path"`
 	Value1 interface{} `json:"value1,omitempty"`
 	Value2 interface{} `json:"value2,omitempty"`
-	Type   string `json:"type"` // "added", "removed", "changed", "type_changed"
+	Type   string      `json:"type"` // "added", "removed", "changed", "type_changed"
 }
 
 // TextDiff represents a line-level diff for non-JSON responses
@@ -116,14 +116,14 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 
 	// Build result
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf(" Differential Analysis: %s\n\n", method))
+	result.WriteString(fmt.Sprintf("🔍 Differential Analysis: %s\n\n", method))
 	result.WriteString(fmt.Sprintf("URL 1: %s → %d (%d bytes)\n", url1, diff.StatusCode1, resp1.BodySize))
 	result.WriteString(fmt.Sprintf("URL 2: %s → %d (%d bytes)\n\n", url2, diff.StatusCode2, resp2.BodySize))
 
 	if diff.BodyMatch {
-		result.WriteString("[WARNING]  Bodies are IDENTICAL — may be a generic/template response\n")
+		result.WriteString("⚠️  Bodies are IDENTICAL — may be a generic/template response\n")
 	} else {
-		result.WriteString("[ALERT] Bodies DIFFER — potential data exposure confirmed!\n\n")
+		result.WriteString("🔴 Bodies DIFFER — potential data exposure confirmed!\n\n")
 
 		if len(diff.JSONDiffs) > 0 {
 			result.WriteString("--- JSON Differences ---\n")
@@ -156,7 +156,7 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 	}
 
 	if diff.DataLeaked {
-		result.WriteString(fmt.Sprintf("\n[ALERT] DATA LEAK DETECTED: %v\n", diff.LeakedFields))
+		result.WriteString(fmt.Sprintf("\n🔴 DATA LEAK DETECTED: %v\n", diff.LeakedFields))
 		result.WriteString(fmt.Sprintf("Severity: %s\n", diff.Severity))
 	}
 
@@ -167,7 +167,7 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 		}
 	}
 
-	result.WriteString(fmt.Sprintf("\n Summary: %s\n", diff.Summary))
+	result.WriteString(fmt.Sprintf("\n📋 Summary: %s\n", diff.Summary))
 
 	// Auto-ingest as finding if data leaked
 	if diff.DataLeaked {
@@ -193,7 +193,7 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 		if e.config.MongoDB != nil {
 			e.config.MongoDB.SaveFinding(ctx, finding)
 		}
-		result.WriteString(fmt.Sprintf("\n Auto-ingested as finding %s\n", finding.ID))
+		result.WriteString(fmt.Sprintf("\n📦 Auto-ingested as finding %s\n", finding.ID))
 	}
 
 	return successResult(result.String()), nil

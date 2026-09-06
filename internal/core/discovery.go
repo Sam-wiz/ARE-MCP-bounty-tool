@@ -130,7 +130,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 	}
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf(" Config/JS Discovery: %s (mode: %s)\n\n", baseURL, mode))
+	result.WriteString(fmt.Sprintf("🔍 Config/JS Discovery: %s (mode: %s)\n\n", baseURL, mode))
 
 	discovery := &DiscoveryResult{
 		ConfigValues: make(map[string]string),
@@ -164,17 +164,17 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 
 				// If it's a config file but we got HTML, it's likely a soft 404
 				if isHTML && !strings.HasSuffix(path, ".html") && !strings.HasSuffix(path, ".php") && !strings.HasSuffix(path, "/") {
-					result.WriteString(fmt.Sprintf("  [WARNING]  Soft 404 / HTML Mismatch: %s (ignoring)\n", path))
+					result.WriteString(fmt.Sprintf("  ⚠️  Soft 404 / HTML Mismatch: %s (ignoring)\n", path))
 					continue
 				}
 
-				result.WriteString(fmt.Sprintf("  [OK] FOUND: %s (%d bytes)\n", path, len(body)))
+				result.WriteString(fmt.Sprintf("  ✅ FOUND: %s (%d bytes)\n", path, len(body)))
 
 				// Check for secrets in the file
 				secrets := scanForSecrets(bodyStr, path)
 				for _, s := range secrets {
 					discovery.Secrets = append(discovery.Secrets, s)
-					result.WriteString(fmt.Sprintf("     SECRET [%s]: %s = %s\n",
+					result.WriteString(fmt.Sprintf("    🔑 SECRET [%s]: %s = %s\n",
 						s.Severity, s.Type, truncateString(s.Value, 40)))
 				}
 
@@ -219,7 +219,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 				re := regexp.MustCompile(`//# sourceMappingURL=(.+)`)
 				if m := re.FindStringSubmatch(jsContent); len(m) > 1 {
 					discovery.SourceMapURLs = append(discovery.SourceMapURLs, m[1])
-					result.WriteString(fmt.Sprintf("   Source map: %s → %s\n", jsURL, m[1]))
+					result.WriteString(fmt.Sprintf("  📍 Source map: %s → %s\n", jsURL, m[1]))
 				}
 			}
 
@@ -227,7 +227,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 			secrets := scanForSecrets(jsContent, jsURL)
 			for _, s := range secrets {
 				discovery.Secrets = append(discovery.Secrets, s)
-				result.WriteString(fmt.Sprintf("   SECRET in %s: [%s] %s\n",
+				result.WriteString(fmt.Sprintf("  🔑 SECRET in %s: [%s] %s\n",
 					jsURL, s.Type, truncateString(s.Value, 50)))
 			}
 
@@ -264,19 +264,19 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 	// Auto-ingest secrets as findings
 	for _, s := range discovery.Secrets {
 		finding := &types.Finding{
-			ID:          uuid.New().String()[:8],
-			State:       types.FindingDetected,
-			Title:       fmt.Sprintf("Exposed %s in %s", s.Type, s.File),
-			Severity:    s.Severity,
-			VulnType:    "information-disclosure",
-			URL:         baseURL,
-			Target:      baseURL,
-			DetectedBy:  "discovery",
-			DetectedAt:  time.Now(),
-			CWE:         "CWE-200",
-			OWASP:       "A01:2021",
-			Tags:        []string{"secret", "config", s.Type},
-			RawOutput:   s.Value,
+			ID:         uuid.New().String()[:8],
+			State:      types.FindingDetected,
+			Title:      fmt.Sprintf("Exposed %s in %s", s.Type, s.File),
+			Severity:   s.Severity,
+			VulnType:   "information-disclosure",
+			URL:        baseURL,
+			Target:     baseURL,
+			DetectedBy: "discovery",
+			DetectedAt: time.Now(),
+			CWE:        "CWE-200",
+			OWASP:      "A01:2021",
+			Tags:       []string{"secret", "config", s.Type},
+			RawOutput:  s.Value,
 		}
 		e.mu.Lock()
 		e.findings[finding.ID] = finding
@@ -335,7 +335,7 @@ func scanForSecrets(content, filename string) []SecretMatch {
 			if seenValues[value] || len(value) < 8 {
 				continue
 			}
-			
+
 			// False Positive Filtering
 			// 1. Ignore if value is all uppercase (likely a constant like INVALID_PASSWORD)
 			isAllUpper := true
@@ -351,18 +351,18 @@ func scanForSecrets(content, filename string) []SecretMatch {
 
 			// 2. Ignore specific false positive prefixes/substrings
 			upperVal := strings.ToUpper(value)
-			if strings.HasPrefix(upperVal, "INVALID_") || 
-			   strings.HasPrefix(upperVal, "ERROR_") ||
-			   strings.Contains(upperVal, "PLACEHOLDER") ||
-			   strings.Contains(upperVal, "EXAMPLE") ||
-			   strings.Contains(upperVal, "ERROR") ||
-			   strings.Contains(upperVal, "STATE") ||
-			   strings.Contains(upperVal, "FORM") ||
-			   strings.Contains(upperVal, "MESSAGE") ||
-			   strings.Contains(upperVal, "UPDATED") ||
-			   strings.Contains(upperVal, "RESET") ||
-			   strings.Contains(upperVal, "BUTTON") ||
-			   strings.Contains(upperVal, "LABEL") {
+			if strings.HasPrefix(upperVal, "INVALID_") ||
+				strings.HasPrefix(upperVal, "ERROR_") ||
+				strings.Contains(upperVal, "PLACEHOLDER") ||
+				strings.Contains(upperVal, "EXAMPLE") ||
+				strings.Contains(upperVal, "ERROR") ||
+				strings.Contains(upperVal, "STATE") ||
+				strings.Contains(upperVal, "FORM") ||
+				strings.Contains(upperVal, "MESSAGE") ||
+				strings.Contains(upperVal, "UPDATED") ||
+				strings.Contains(upperVal, "RESET") ||
+				strings.Contains(upperVal, "BUTTON") ||
+				strings.Contains(upperVal, "LABEL") {
 				continue
 			}
 
