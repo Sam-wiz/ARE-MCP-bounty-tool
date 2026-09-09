@@ -24,7 +24,7 @@ import (
 
 func (e *Engine) handleReviewReport(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	if !e.reviewer.Available() {
-		return errorResult("[ERROR] No reviewer panel configured. Set OPENAI_API_KEY and/or NVIDIA_API_KEY in .env."), nil
+		return errorResult("❌ No reviewer panel configured. Set OPENAI_API_KEY and/or NVIDIA_API_KEY in .env."), nil
 	}
 
 	program := argStr(args, "program")
@@ -59,14 +59,14 @@ func (e *Engine) handleReviewReport(ctx context.Context, args map[string]interfa
 	}
 
 	if in.Title == "" && in.Description == "" {
-		return errorResult("[ERROR] Provide a finding_id, or inline title/description (+severity, vuln_type, url, poc, evidence)."), nil
+		return errorResult("❌ Provide a finding_id, or inline title/description (+severity, vuln_type, url, poc, evidence)."), nil
 	}
 
 	// Cheap deterministic precheck FIRST — if it hard-disqualifies (out-of-scope
 	// or own-duplicate), skip the expensive panel entirely (saves tokens/time).
 	pc := e.runPrecheck(ctx, in)
 	if pc.SkipPanel {
-		return successResult(formatPrecheck(pc) + "\n[SKIP]  Panel skipped — resolve the disqualifier above or drop the finding. No LLM tokens spent."), nil
+		return successResult(formatPrecheck(pc) + "\n⏭️  Panel skipped — resolve the disqualifier above or drop the finding. No LLM tokens spent."), nil
 	}
 
 	// Ground the panel: program scope + prior lessons for this program/class.
@@ -93,7 +93,7 @@ func (e *Engine) handleReviewReport(ctx context.Context, args map[string]interfa
 
 	review, err := e.reviewer.Review(ctx, in)
 	if err != nil {
-		return errorResult(fmt.Sprintf("[ERROR] Review failed: %v", err)), nil
+		return errorResult(fmt.Sprintf("❌ Review failed: %v", err)), nil
 	}
 
 	// Persist the review and reflect the mechanical verdict into the finding's
@@ -143,6 +143,21 @@ func fillFromFinding(in *reviewer.Input, f *types.Finding) {
 	if in.Evidence == "" && len(f.Evidence) > 0 {
 		in.Evidence = strings.Join(f.Evidence, "\n")
 	}
+	// Trusted execution signal from the success oracle (M1), if verify_finding
+	// has run. The panel is told to trust this over the prose.
+	if in.OracleVerified == "" && f.ReplayResult != nil {
+		r := f.ReplayResult
+		switch {
+		case r.Unoracled:
+			in.OracleVerified = "UNORACLED"
+		case r.Passed:
+			in.OracleVerified = "PASS"
+		default:
+			in.OracleVerified = "FAIL"
+		}
+		in.OracleDetail = fmt.Sprintf("class=%s exploit_observed=%v control_observed=%v",
+			r.Class, r.Exploit.Observed, r.Control.Observed)
+	}
 }
 
 func formatPoC(f *types.Finding) string {
@@ -172,9 +187,9 @@ func formatPoC(f *types.Finding) string {
 func formatReview(r *types.Review, panelModels []string) string {
 	var b strings.Builder
 	emoji := map[types.ReviewVerdict]string{
-		types.VerdictReject:          "[BLOCKED]",
-		types.VerdictRevise:          "",
-		types.VerdictSubmitCandidate: "",
+		types.VerdictReject:          "⛔",
+		types.VerdictRevise:          "🔧",
+		types.VerdictSubmitCandidate: "🎯",
 	}[r.Verdict]
 	// A blocker is a hard objection to SOLVE or DROP — not a terminal rejection.
 	label := map[types.ReviewVerdict]string{
@@ -188,7 +203,7 @@ func formatReview(r *types.Review, panelModels []string) string {
 
 	for _, v := range r.Panel {
 		if v.Error != "" {
-			b.WriteString(fmt.Sprintf("  • %s — [WARNING] error: %s\n", v.Model, v.Error))
+			b.WriteString(fmt.Sprintf("  • %s — ⚠️ error: %s\n", v.Model, v.Error))
 			continue
 		}
 		b.WriteString(fmt.Sprintf("  • %s → %s (conf %.0f%%) | real=%v impact=%v scope=%v by_design=%v dup=%.0f%% pay=%v\n",
@@ -201,7 +216,7 @@ func formatReview(r *types.Review, panelModels []string) string {
 	b.WriteString(fmt.Sprintf("\nAggregate rationale: %s\n", r.Rationale))
 
 	if len(r.EvidenceDemands) > 0 {
-		b.WriteString("\n EVIDENCE-DEMANDS TO CLEAR (do not dismiss — prove each or drop the finding):\n")
+		b.WriteString("\n📋 EVIDENCE-DEMANDS TO CLEAR (do not dismiss — prove each or drop the finding):\n")
 		for i, d := range r.EvidenceDemands {
 			b.WriteString(fmt.Sprintf("  %d. %s\n", i+1, d))
 		}
@@ -227,11 +242,11 @@ func formatReview(r *types.Review, panelModels []string) string {
 
 func (e *Engine) handleRequestHorizon(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	if !e.director.Available() {
-		return errorResult("[ERROR] No director model configured. Set DIRECTOR_PROVIDER/DIRECTOR_MODEL (+ matching API key) in .env."), nil
+		return errorResult("❌ No director model configured. Set DIRECTOR_PROVIDER/DIRECTOR_MODEL (+ matching API key) in .env."), nil
 	}
 	program := e.GetProgram()
 	if program == "" {
-		return errorResult("[ERROR] No active program. Call set_program first."), nil
+		return errorResult("❌ No active program. Call set_program first."), nil
 	}
 
 	in := director.Input{
@@ -266,14 +281,14 @@ func (e *Engine) handleRequestHorizon(ctx context.Context, args map[string]inter
 
 	hyps, err := e.director.Horizon(ctx, in)
 	if err != nil {
-		return errorResult(fmt.Sprintf("[ERROR] Director failed: %v", err)), nil
+		return errorResult(fmt.Sprintf("❌ Director failed: %v", err)), nil
 	}
 	if len(hyps) == 0 {
 		return successResult("Director returned no NEW hypotheses (all proposals collided with already-explored vectors). The surface may be genuinely exhausted."), nil
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf(" NEW HORIZONS from %s (%d hypotheses — these are UNVERIFIED ideas to test, not findings):\n\n", e.director.ModelName(), len(hyps)))
+	b.WriteString(fmt.Sprintf("🧭 NEW HORIZONS from %s (%d hypotheses — these are UNVERIFIED ideas to test, not findings):\n\n", e.director.ModelName(), len(hyps)))
 	for i := range hyps {
 		h := &hyps[i]
 		if e.config.MongoDB != nil {
@@ -294,7 +309,7 @@ func (e *Engine) handleRequestHorizon(ctx context.Context, args map[string]inter
 
 func (e *Engine) handleLogTriageOutcome(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	if e.config.MongoDB == nil {
-		return errorResult("[ERROR] MongoDB not available — cannot record outcome."), nil
+		return errorResult("❌ MongoDB not available — cannot record outcome."), nil
 	}
 
 	stateRaw := strings.ToUpper(strings.TrimSpace(argStr(args, "state")))
@@ -308,7 +323,7 @@ func (e *Engine) handleLogTriageOutcome(ctx context.Context, args map[string]int
 	}
 	state, ok := valid[stateRaw]
 	if !ok {
-		return errorResult("[ERROR] 'state' must be ACCEPTED, DUPLICATE, INFORMATIONAL, NOT_APPLICABLE, or PENDING."), nil
+		return errorResult("❌ 'state' must be ACCEPTED, DUPLICATE, INFORMATIONAL, NOT_APPLICABLE, or PENDING."), nil
 	}
 
 	program := argStr(args, "program")
@@ -335,7 +350,7 @@ func (e *Engine) handleLogTriageOutcome(ctx context.Context, args map[string]int
 		outcome.Currency = "USD"
 	}
 	if err := e.config.MongoDB.LogTriageOutcome(ctx, outcome); err != nil {
-		return errorResult(fmt.Sprintf("[ERROR] Failed to log outcome: %v", err)), nil
+		return errorResult(fmt.Sprintf("❌ Failed to log outcome: %v", err)), nil
 	}
 
 	// Mirror into the finding's terminal state.
@@ -361,11 +376,11 @@ func (e *Engine) handleLogTriageOutcome(ctx context.Context, args map[string]int
 			Lesson:   fmt.Sprintf("[%s] %s → closed %s: %s", program, outcome.Title, state, outcome.RejectReason),
 			Source:   outcome.FindingID,
 		})
-		lessonNote = "\n A lesson was recorded from this rejection — the reviewer will apply it to future findings of this class."
+		lessonNote = "\n📚 A lesson was recorded from this rejection — the reviewer will apply it to future findings of this class."
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("[OK] Outcome recorded: %s → %s", program, state))
+	b.WriteString(fmt.Sprintf("✅ Outcome recorded: %s → %s", program, state))
 	if outcome.RewardAmount > 0 {
 		b.WriteString(fmt.Sprintf(" (%.2f %s)", outcome.RewardAmount, outcome.Currency))
 	}
@@ -381,7 +396,7 @@ func (e *Engine) handleLogTriageOutcome(ctx context.Context, args map[string]int
 func (e *Engine) handleMarkSubmitReady(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	findingID := argStr(args, "finding_id")
 	if findingID == "" {
-		return errorResult("[ERROR] 'finding_id' is required."), nil
+		return errorResult("❌ 'finding_id' is required."), nil
 	}
 	if !argBool(args, "human_confirm") {
 		// Record the request for a human decision; do NOT advance.
@@ -395,17 +410,17 @@ func (e *Engine) handleMarkSubmitReady(ctx context.Context, args map[string]inte
 				Category:  "approval",
 			})
 		}
-		return errorResult("[BLOCKED] HUMAN GATE: submission requires explicit approval.\n" +
+		return errorResult("🛑 HUMAN GATE: submission requires explicit approval.\n" +
 			"A human must confirm before this finding is marked SUBMIT_READY.\n" +
 			"Re-call with human_confirm=true only after the human has approved."), nil
 	}
 
 	if e.config.MongoDB != nil {
 		if err := e.config.MongoDB.UpdateFindingState(ctx, findingID, types.FindingSubmitReady); err != nil {
-			return errorResult(fmt.Sprintf("[ERROR] Failed to update state: %v", err)), nil
+			return errorResult(fmt.Sprintf("❌ Failed to update state: %v", err)), nil
 		}
 	}
-	return successResult(fmt.Sprintf("[OK] Finding %s marked SUBMIT_READY (human-approved). Submit it, then record the result with log_triage_outcome.", findingID)), nil
+	return successResult(fmt.Sprintf("✅ Finding %s marked SUBMIT_READY (human-approved). Submit it, then record the result with log_triage_outcome.", findingID)), nil
 }
 
 // ============================================================================
@@ -415,10 +430,10 @@ func (e *Engine) handleMarkSubmitReady(ctx context.Context, args map[string]inte
 func (e *Engine) handleRecordLesson(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	lesson := argStr(args, "lesson")
 	if lesson == "" {
-		return errorResult("[ERROR] 'lesson' is required — the guidance to remember."), nil
+		return errorResult("❌ 'lesson' is required — the guidance to remember."), nil
 	}
 	if e.config.MongoDB == nil {
-		return errorResult("[ERROR] MongoDB not available — cannot store lesson."), nil
+		return errorResult("❌ MongoDB not available — cannot store lesson."), nil
 	}
 	l := &types.Lesson{
 		Program:  argStr(args, "program"), // empty = global
@@ -428,13 +443,13 @@ func (e *Engine) handleRecordLesson(ctx context.Context, args map[string]interfa
 		Source:   "manual",
 	}
 	if err := e.config.MongoDB.SaveLesson(ctx, l); err != nil {
-		return errorResult(fmt.Sprintf("[ERROR] Failed to save lesson: %v", err)), nil
+		return errorResult(fmt.Sprintf("❌ Failed to save lesson: %v", err)), nil
 	}
 	scope := l.Program
 	if scope == "" {
 		scope = "global"
 	}
-	return successResult(fmt.Sprintf(" Lesson saved (%s). Future reviews of matching findings will apply it.", scope)), nil
+	return successResult(fmt.Sprintf("📚 Lesson saved (%s). Future reviews of matching findings will apply it.", scope)), nil
 }
 
 // ============================================================================
@@ -443,12 +458,12 @@ func (e *Engine) handleRecordLesson(ctx context.Context, args map[string]interfa
 
 func (e *Engine) handleReviewStats(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	if e.config.MongoDB == nil {
-		return errorResult("[ERROR] MongoDB not available."), nil
+		return errorResult("❌ MongoDB not available."), nil
 	}
 	program := argStr(args, "program") // empty = all
 	stats, err := e.config.MongoDB.GetOutcomeStats(ctx, program)
 	if err != nil {
-		return errorResult(fmt.Sprintf("[ERROR] Failed to compute stats: %v", err)), nil
+		return errorResult(fmt.Sprintf("❌ Failed to compute stats: %v", err)), nil
 	}
 
 	scope := program
@@ -456,7 +471,7 @@ func (e *Engine) handleReviewStats(ctx context.Context, args map[string]interfac
 		scope = "ALL PROGRAMS"
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf(" REAL SCOREBOARD — %s (from triage outcomes, not self-labels)\n\n", scope))
+	b.WriteString(fmt.Sprintf("📊 REAL SCOREBOARD — %s (from triage outcomes, not self-labels)\n\n", scope))
 	if stats.Total == 0 {
 		b.WriteString("No triage outcomes recorded yet. Log real verdicts with log_triage_outcome to build the scoreboard.\n")
 		return successResult(b.String()), nil
@@ -555,16 +570,16 @@ func (e *Engine) runPrecheck(ctx context.Context, in reviewer.Input) precheck.Re
 
 func formatPrecheck(pc precheck.Result) string {
 	var b strings.Builder
-	icon := "[OK]"
+	icon := "✅"
 	if pc.Verdict == precheck.Disqualified {
-		icon = "[BLOCKED]"
+		icon = "⛔"
 	}
 	b.WriteString(fmt.Sprintf("%s PRECHECK: %s  (value score %.0f)\n", icon, pc.Verdict, pc.ValueScore))
 	for _, r := range pc.Reasons {
-		b.WriteString("   [BLOCKED] " + r + "\n")
+		b.WriteString("   ⛔ " + r + "\n")
 	}
 	for _, w := range pc.Warnings {
-		b.WriteString("   [WARNING]  " + w + "\n")
+		b.WriteString("   ⚠️  " + w + "\n")
 	}
 	return b.String()
 }
@@ -589,14 +604,14 @@ func (e *Engine) handlePrecheckFinding(ctx context.Context, args map[string]inte
 		}
 	}
 	if in.Title == "" && in.Description == "" {
-		return errorResult("[ERROR] Provide finding_id or inline title/description."), nil
+		return errorResult("❌ Provide finding_id or inline title/description."), nil
 	}
 	pc := e.runPrecheck(ctx, in)
 	out := formatPrecheck(pc)
 	if pc.Verdict == precheck.Proceed {
 		out += "\n→ Passed precheck. Run review_report for the adversarial panel."
 	} else {
-		out += "\n[SKIP]  Disqualified deterministically — no LLM tokens needed. Resolve or drop."
+		out += "\n⏭️  Disqualified deterministically — no LLM tokens needed. Resolve or drop."
 	}
 	return successResult(out), nil
 }

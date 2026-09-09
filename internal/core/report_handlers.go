@@ -20,14 +20,19 @@ func (e *Engine) handleGetFindings(ctx context.Context, args map[string]interfac
 	if err != nil {
 		return errorResult("Cannot read persisted findings"), nil
 	}
+
 	if len(findings) == 0 {
 		return successResult("No findings match the criteria"), nil
 	}
+
 	data, _ := json.MarshalIndent(findings, "", "  ")
 	return successResult(string(data)), nil
 }
 
-// Read persisted state on every request so pod replacement does not hide findings.
+// findingsForProgram returns the active program's findings, honoring optional
+// "state" and "severity" filters. Persisted state is read on every request so
+// a pod replacement (or a second MCP session sharing the database) does not
+// hide findings, and findings never leak across programs.
 func (e *Engine) findingsForProgram(ctx context.Context, args map[string]interface{}) ([]*types.Finding, error) {
 	e.mu.RLock()
 	program := e.program
