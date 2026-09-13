@@ -14,10 +14,10 @@ import (
 
 // Manager handles human consultations
 type Manager struct {
-	storage    ConsultationStorage
-	pending    map[string]*Consultation
-	responses  chan *Response
-	mu         sync.RWMutex
+	storage   ConsultationStorage
+	pending   map[string]*Consultation
+	responses chan *Response
+	mu        sync.RWMutex
 }
 
 // ConsultationStorage interface for persistence
@@ -29,29 +29,29 @@ type ConsultationStorage interface {
 
 // Consultation represents a request for human input
 type Consultation struct {
-	ID         string                 `json:"id"`
-	SessionID  string                 `json:"session_id"`
-	Type       ConsultationType       `json:"type"`
-	Urgency    Urgency                `json:"urgency"`
-	Question   string                 `json:"question"`
-	Context    string                 `json:"context"`
-	Options    []Option               `json:"options,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt  time.Time              `json:"created_at"`
-	Timeout    time.Duration          `json:"timeout"`
-	Response   *Response              `json:"response,omitempty"`
+	ID        string                 `json:"id"`
+	SessionID string                 `json:"session_id"`
+	Type      ConsultationType       `json:"type"`
+	Urgency   Urgency                `json:"urgency"`
+	Question  string                 `json:"question"`
+	Context   string                 `json:"context"`
+	Options   []Option               `json:"options,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
+	Timeout   time.Duration          `json:"timeout"`
+	Response  *Response              `json:"response,omitempty"`
 }
 
 // ConsultationType defines the type of consultation
 type ConsultationType string
 
 const (
-	ConsultScope     ConsultationType = "scope"      // About what's in scope
-	ConsultEthics    ConsultationType = "ethics"     // Ethical concerns
-	ConsultTechnical ConsultationType = "technical"  // Technical approach
-	ConsultPriority  ConsultationType = "priority"   // What to prioritize
-	ConsultRisk      ConsultationType = "risk"       // Risk assessment
-	ConsultApproval  ConsultationType = "approval"   // Needs explicit approval
+	ConsultScope     ConsultationType = "scope"     // About what's in scope
+	ConsultEthics    ConsultationType = "ethics"    // Ethical concerns
+	ConsultTechnical ConsultationType = "technical" // Technical approach
+	ConsultPriority  ConsultationType = "priority"  // What to prioritize
+	ConsultRisk      ConsultationType = "risk"      // Risk assessment
+	ConsultApproval  ConsultationType = "approval"  // Needs explicit approval
 )
 
 // Urgency defines how urgent the consultation is
@@ -94,15 +94,15 @@ func NewManager(storage ConsultationStorage) *Manager {
 func (m *Manager) Ask(ctx context.Context, c *Consultation) (*Response, error) {
 	c.ID = uuid.New().String()
 	c.CreatedAt = time.Now()
-	
+
 	if c.Timeout == 0 {
 		c.Timeout = 5 * time.Minute
 	}
-	
+
 	m.mu.Lock()
 	m.pending[c.ID] = c
 	m.mu.Unlock()
-	
+
 	// Log to storage
 	if m.storage != nil {
 		m.storage.LogConsultation(ctx, &types.Consultation{
@@ -113,12 +113,12 @@ func (m *Manager) Ask(ctx context.Context, c *Consultation) (*Response, error) {
 			Category:  string(c.Type),
 		})
 	}
-	
+
 	// If not blocking, use default
 	if c.Urgency != UrgencyBlocking {
 		return m.getDefaultResponse(c), nil
 	}
-	
+
 	// Wait for response
 	select {
 	case <-ctx.Done():
@@ -131,7 +131,7 @@ func (m *Manager) Ask(ctx context.Context, c *Consultation) (*Response, error) {
 			return resp, nil
 		}
 	}
-	
+
 	return m.getDefaultResponse(c), nil
 }
 
@@ -153,7 +153,7 @@ func (m *Manager) AskApproval(ctx context.Context, sessionID, question, context 
 		{ID: "approve", Label: "Approve", Description: "Proceed with the operation"},
 		{ID: "deny", Label: "Deny", Description: "Do not proceed", IsDefault: true},
 	}
-	
+
 	resp, err := m.Ask(ctx, &Consultation{
 		SessionID: sessionID,
 		Type:      ConsultApproval,
@@ -165,7 +165,7 @@ func (m *Manager) AskApproval(ctx context.Context, sessionID, question, context 
 	if err != nil {
 		return false, err
 	}
-	
+
 	return resp.ChosenOption == "approve" || (resp.Approved != nil && *resp.Approved), nil
 }
 
@@ -184,22 +184,22 @@ func (m *Manager) AskPriority(ctx context.Context, sessionID string, options []O
 func (m *Manager) Respond(id string, resp *Response) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	c, ok := m.pending[id]
 	if !ok {
 		return fmt.Errorf("consultation not found: %s", id)
 	}
-	
+
 	resp.ConsultationID = id
 	resp.RespondedAt = time.Now()
 	c.Response = resp
-	
+
 	// Send to channel
 	select {
 	case m.responses <- resp:
 	default:
 	}
-	
+
 	delete(m.pending, id)
 	return nil
 }
@@ -208,7 +208,7 @@ func (m *Manager) Respond(id string, resp *Response) error {
 func (m *Manager) GetPending() []*Consultation {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	pending := make([]*Consultation, 0, len(m.pending))
 	for _, c := range m.pending {
 		pending = append(pending, c)
@@ -222,7 +222,7 @@ func (m *Manager) getDefaultResponse(c *Consultation) *Response {
 		ConsultationID: c.ID,
 		RespondedAt:    time.Now(),
 	}
-	
+
 	// Find default option
 	for _, opt := range c.Options {
 		if opt.IsDefault {
@@ -230,25 +230,25 @@ func (m *Manager) getDefaultResponse(c *Consultation) *Response {
 			break
 		}
 	}
-	
+
 	// If no default, use first option
 	if resp.ChosenOption == "" && len(c.Options) > 0 {
 		resp.ChosenOption = c.Options[0].ID
 	}
-	
+
 	return resp
 }
 
 // FormatForDisplay formats a consultation for human display
 func (c *Consultation) FormatForDisplay() string {
-	urgencyEmoji := "[INFO]"
+	urgencyEmoji := "ℹ️"
 	switch c.Urgency {
 	case UrgencyBlocking:
-		urgencyEmoji = "[BLOCKED]"
+		urgencyEmoji = "🛑"
 	case UrgencyCanContinue:
-		urgencyEmoji = "[WARNING]"
+		urgencyEmoji = "⚠️"
 	}
-	
+
 	result := fmt.Sprintf(`
 %s CONSULTATION REQUIRED [%s]
 
@@ -257,7 +257,7 @@ Question: %s
 Context: %s
 
 `, urgencyEmoji, c.Type, c.Question, c.Context)
-	
+
 	if len(c.Options) > 0 {
 		result += "Options:\n"
 		for i, opt := range c.Options {
@@ -275,7 +275,7 @@ Context: %s
 			result += "\n"
 		}
 	}
-	
+
 	return result
 }
 

@@ -35,11 +35,11 @@ func NewChecklistManager(configPath string, opsecMgr *Manager) (*ChecklistManage
 		checklists: make(map[string]*Checklist),
 		opsecMgr:   opsecMgr,
 	}
-	
+
 	if err := cm.loadChecklists(configPath); err != nil {
 		return nil, err
 	}
-	
+
 	return cm, nil
 }
 
@@ -49,19 +49,19 @@ func (cm *ChecklistManager) loadChecklists(path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	var config struct {
 		Operations []Checklist `yaml:"operations"`
 	}
-	
+
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return err
 	}
-	
+
 	for i := range config.Operations {
 		cm.checklists[config.Operations[i].Name] = &config.Operations[i]
 	}
-	
+
 	return nil
 }
 
@@ -77,41 +77,41 @@ func (cm *ChecklistManager) ValidateOperation(name string, context *OperationCon
 	if !ok {
 		return nil, fmt.Errorf("unknown operation: %s", name)
 	}
-	
+
 	result := &ValidationResult{
 		Operation:  name,
 		CanProceed: true,
 		Warnings:   make([]string, 0),
 		Blockers:   make([]string, 0),
 	}
-	
+
 	// Check requirements
 	if checklist.Requires.ExplicitPermission && !context.HasExplicitPermission {
 		result.CanProceed = false
 		result.Blockers = append(result.Blockers, "Explicit permission required from human operator")
 	}
-	
+
 	if checklist.Requires.ScopeConfirmation && !context.ScopeConfirmed {
 		result.CanProceed = false
 		result.Blockers = append(result.Blockers, "Scope confirmation required")
 	}
-	
+
 	if checklist.Requires.FindingVerified && !context.FindingVerified {
 		result.CanProceed = false
 		result.Blockers = append(result.Blockers, "Finding must be verified before this operation")
 	}
-	
+
 	// Check OPSEC requirements
 	if cm.opsecMgr != nil && !cm.opsecMgr.IsVerified() {
 		for _, layer := range checklist.OpsecLayers {
-			result.Warnings = append(result.Warnings, 
+			result.Warnings = append(result.Warnings,
 				fmt.Sprintf("OPSEC layer '%s' should be active", layer))
 		}
 	}
-	
+
 	// Generate checklist items for display
 	result.ChecklistItems = checklist.Items
-	
+
 	return result, nil
 }
 
@@ -121,7 +121,7 @@ func (cm *ChecklistManager) RequestApproval(name string, context *OperationConte
 	if !ok {
 		return nil
 	}
-	
+
 	return &ApprovalRequest{
 		Operation:   name,
 		Description: checklist.Description,
@@ -152,17 +152,17 @@ type ValidationResult struct {
 
 // ApprovalRequest represents a request for human approval
 type ApprovalRequest struct {
-	Operation   string                 `json:"operation"`
-	Description string                 `json:"description"`
-	Checklist   []string               `json:"checklist"`
-	Context     *OperationContext      `json:"context"`
-	Urgency     string                 `json:"urgency"` // blocking, warning
+	Operation   string            `json:"operation"`
+	Description string            `json:"description"`
+	Checklist   []string          `json:"checklist"`
+	Context     *OperationContext `json:"context"`
+	Urgency     string            `json:"urgency"` // blocking, warning
 }
 
 // FormatForDisplay formats the approval request for display
 func (ar *ApprovalRequest) FormatForDisplay() string {
 	result := fmt.Sprintf(`
- RISKY OPERATION APPROVAL REQUIRED
+🔒 RISKY OPERATION APPROVAL REQUIRED
 
 Operation: %s
 Description: %s
@@ -170,13 +170,13 @@ Target: %s
 
 CHECKLIST:
 `, ar.Operation, ar.Description, ar.Context.Target)
-	
+
 	for i, item := range ar.Checklist {
 		result += fmt.Sprintf("  [ ] %d. %s\n", i+1, item)
 	}
-	
+
 	result += `
-[WARNING]  This operation requires explicit approval.
+⚠️  This operation requires explicit approval.
 Please review the checklist and confirm to proceed.
 `
 	return result

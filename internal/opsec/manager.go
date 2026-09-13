@@ -19,7 +19,7 @@ type Manager struct {
 	proxyChain *ProxyChain
 	torManager *TorManager
 	vpnManager *VPNManager
-	
+
 	originalIP string
 	currentIP  string
 	verified   bool
@@ -82,14 +82,14 @@ func (m *Manager) Setup(ctx context.Context) error {
 	if !m.config.Enabled {
 		return nil
 	}
-	
+
 	// Store original IP
 	originalIP, err := m.getPublicIP(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get original IP: %w", err)
 	}
 	m.originalIP = originalIP
-	
+
 	// 1. MAC Spoofing (first - lowest level)
 	if m.config.MACSpoof.Enabled {
 		m.macSpoofer = NewMACSpoofer(m.config.MACSpoof.Interface)
@@ -97,7 +97,7 @@ func (m *Manager) Setup(ctx context.Context) error {
 			return fmt.Errorf("MAC spoofing failed: %w", err)
 		}
 	}
-	
+
 	// 2. VPN (if enabled)
 	if m.config.VPN.Enabled {
 		switch m.config.VPN.Provider {
@@ -110,7 +110,7 @@ func (m *Manager) Setup(ctx context.Context) error {
 			return fmt.Errorf("VPN connection failed: %w", err)
 		}
 	}
-	
+
 	// 3. Tor (if enabled)
 	if m.config.Tor.Enabled {
 		m.torManager = NewTorManager(m.config.Tor.SocksPort, m.config.Tor.ControlPort)
@@ -120,7 +120,7 @@ func (m *Manager) Setup(ctx context.Context) error {
 		// Add Tor to proxy chain
 		m.config.ProxyChain = append([]ProxyConfig{m.torManager.GetProxyConfig()}, m.config.ProxyChain...)
 	}
-	
+
 	// 4. Proxy Chain
 	if len(m.config.ProxyChain) > 0 {
 		var err error
@@ -129,14 +129,14 @@ func (m *Manager) Setup(ctx context.Context) error {
 			return fmt.Errorf("proxy chain setup failed: %w", err)
 		}
 	}
-	
+
 	// 5. Clean Environment
 	if m.config.CleanEnv.UseTempDirs {
 		if err := m.setupCleanEnvironment(); err != nil {
 			return fmt.Errorf("clean environment setup failed: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -145,7 +145,7 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 	result := &VerificationResult{
 		Checks: make(map[string]CheckResult),
 	}
-	
+
 	// Check IP changed
 	currentIP, err := m.getPublicIPViaProxy(ctx)
 	if err != nil {
@@ -158,7 +158,7 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 			Details: fmt.Sprintf("Original: %s, Current: %s", m.originalIP, currentIP),
 		}
 	}
-	
+
 	// Check MAC changed
 	if m.macSpoofer != nil {
 		changed, err := m.macSpoofer.VerifyMACChanged()
@@ -171,7 +171,7 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 			}
 		}
 	}
-	
+
 	// Check Tor
 	if m.torManager != nil {
 		torIP, err := m.torManager.GetCurrentIP(ctx)
@@ -184,7 +184,7 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 			}
 		}
 	}
-	
+
 	// Check DNS leak
 	dnsLeak, err := m.checkDNSLeak(ctx)
 	if err != nil {
@@ -192,7 +192,7 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 	} else {
 		result.Checks["dns_secure"] = CheckResult{Passed: !dnsLeak, Details: "DNS leak check completed"}
 	}
-	
+
 	// Overall status
 	result.AllPassed = true
 	for _, check := range result.Checks {
@@ -201,7 +201,7 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 			break
 		}
 	}
-	
+
 	m.verified = result.AllPassed
 	return result, nil
 }
@@ -209,26 +209,26 @@ func (m *Manager) Verify(ctx context.Context) (*VerificationResult, error) {
 // Teardown tears down all OPSEC layers
 func (m *Manager) Teardown(ctx context.Context) error {
 	var errors []error
-	
+
 	// Reverse order of setup
 	if m.torManager != nil {
 		if err := m.torManager.Stop(ctx); err != nil {
 			errors = append(errors, err)
 		}
 	}
-	
+
 	if m.vpnManager != nil {
 		if err := m.vpnManager.Disconnect(ctx); err != nil {
 			errors = append(errors, err)
 		}
 	}
-	
+
 	if m.macSpoofer != nil {
 		if err := m.macSpoofer.Restore(ctx); err != nil {
 			errors = append(errors, err)
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("teardown errors: %v", errors)
 	}
@@ -251,46 +251,46 @@ func (m *Manager) IsVerified() bool {
 // getPublicIP gets the current public IP
 func (m *Manager) getPublicIP(ctx context.Context) (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.ipify.org", nil)
 	if err != nil {
 		return "", err
 	}
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(body), nil
 }
 
 // getPublicIPViaProxy gets IP through proxy chain
 func (m *Manager) getPublicIPViaProxy(ctx context.Context) (string, error) {
 	client := m.GetHTTPClient()
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.ipify.org", nil)
 	if err != nil {
 		return "", err
 	}
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(body), nil
 }
 
@@ -298,24 +298,24 @@ func (m *Manager) getPublicIPViaProxy(ctx context.Context) (string, error) {
 func (m *Manager) checkDNSLeak(ctx context.Context) (bool, error) {
 	// Use DNS leak test service
 	client := m.GetHTTPClient()
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://bash.ws/dnsleak/test", nil)
 	if err != nil {
 		return false, err
 	}
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
 	}
 	defer resp.Body.Close()
-	
+
 	var result struct {
 		IP      string `json:"ip"`
 		Country string `json:"country"`
 	}
 	json.NewDecoder(resp.Body).Decode(&result)
-	
+
 	// Check if DNS server is from a known privacy concern country
 	// This is a simplified check
 	return false, nil
@@ -328,22 +328,22 @@ func (m *Manager) setupCleanEnvironment() error {
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return err
 	}
-	
+
 	// Set environment variables
 	os.Setenv("HACK_AI_TMP", tmpDir)
 	os.Setenv("HOME", tmpDir) // Redirect home to temp
-	
+
 	// Clear browser data if enabled
 	if m.config.CleanEnv.ClearBrowser {
 		m.clearBrowserData()
 	}
-	
+
 	// Disable history
 	if m.config.CleanEnv.NoHistory {
 		os.Setenv("HISTFILE", "/dev/null")
 		os.Setenv("HISTSIZE", "0")
 	}
-	
+
 	return nil
 }
 
@@ -352,7 +352,7 @@ func (m *Manager) clearBrowserData() {
 	// Chrome
 	exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), ".config/google-chrome")).Run()
 	exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), "Library/Application Support/Google/Chrome")).Run()
-	
+
 	// Firefox
 	exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), ".mozilla")).Run()
 	exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), "Library/Application Support/Firefox")).Run()
@@ -374,16 +374,16 @@ type CheckResult struct {
 func (v *VerificationResult) String() string {
 	result := "OPSEC Verification:\n"
 	for name, check := range v.Checks {
-		status := "[OK]"
+		status := "✅"
 		if !check.Passed {
-			status = "[ERROR]"
+			status = "❌"
 		}
 		result += fmt.Sprintf("  %s %s: %s\n", status, name, check.Details)
 	}
 	if v.AllPassed {
-		result += "\n[OK] ALL CHECKS PASSED - Ready for testing"
+		result += "\n✅ ALL CHECKS PASSED - Ready for testing"
 	} else {
-		result += "\n[ERROR] SOME CHECKS FAILED - Review before proceeding"
+		result += "\n❌ SOME CHECKS FAILED - Review before proceeding"
 	}
 	return result
 }

@@ -94,7 +94,8 @@ func (m *Manager) Create(programName string) (*Workspace, error) {
 		return nil, err
 	}
 
-	// Provision Python venv with pre-seeded packages
+	// Provision Python venv with pre-seeded packages.
+	// WORKSPACE_SKIP_VENV=1 skips this (tests, CI, constrained hosts).
 	if os.Getenv("WORKSPACE_SKIP_VENV") != "1" {
 		if err := m.ProvisionVenv(workspacePath); err != nil {
 			log.Printf("Warning: Failed to provision venv for %s: %v", programName, err)
