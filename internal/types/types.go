@@ -35,15 +35,15 @@ type ContentBlock struct {
 
 // PluginDefinition represents a tool plugin loaded from YAML
 type PluginDefinition struct {
-	Name         string            `yaml:"name"`
-	Category     string            `yaml:"category"`
-	Version      string            `yaml:"version"`
-	Description  string            `yaml:"description"`
-	Install      InstallConfig     `yaml:"install"`
-	Execute      ExecuteConfig     `yaml:"execute"`
-	Parse        ParseConfig       `yaml:"parse"`
-	Capabilities []string          `yaml:"capabilities"`
-	Resources    ResourceConfig    `yaml:"resources"`
+	Name         string         `yaml:"name"`
+	Category     string         `yaml:"category"`
+	Version      string         `yaml:"version"`
+	Description  string         `yaml:"description"`
+	Install      InstallConfig  `yaml:"install"`
+	Execute      ExecuteConfig  `yaml:"execute"`
+	Parse        ParseConfig    `yaml:"parse"`
+	Capabilities []string       `yaml:"capabilities"`
+	Resources    ResourceConfig `yaml:"resources"`
 }
 
 // InstallConfig defines how to install a tool
@@ -55,10 +55,10 @@ type InstallConfig struct {
 
 // ExecuteConfig defines how to execute a tool
 type ExecuteConfig struct {
-	Command string                 `yaml:"command"`
-	Input   map[string]InputParam  `yaml:"input"`
-	Output  OutputConfig           `yaml:"output"`
-	Timeout int                    `yaml:"timeout"` // seconds
+	Command string                `yaml:"command"`
+	Input   map[string]InputParam `yaml:"input"`
+	Output  OutputConfig          `yaml:"output"`
+	Timeout int                   `yaml:"timeout"` // seconds
 }
 
 // InputParam defines an input parameter for a tool
@@ -101,19 +101,19 @@ type ResourceConfig struct {
 
 // BountyProgram represents a bug bounty program
 type BountyProgram struct {
-	ID          string    `json:"id" bson:"_id"`
-	Slug        string    `json:"slug" bson:"slug"`                       // e.g., "playtika", "hackerone-xyz"
-	Name        string    `json:"name" bson:"name"`                       // e.g., "Playtika Bug Bounty"
-	Platform    string    `json:"platform" bson:"platform"`               // hackerone, bugcrowd, intigriti, independent
-	URL         string    `json:"url" bson:"url"`                         // Program URL
-	Scope       Scope     `json:"scope" bson:"scope"`                     // In-scope / out-of-scope
-	PayoutMin   int       `json:"payout_min,omitempty" bson:"payout_min,omitempty"`
-	PayoutMax   int       `json:"payout_max,omitempty" bson:"payout_max,omitempty"`
-	Rules       []string  `json:"rules,omitempty" bson:"rules,omitempty"` // Special rules / restrictions
-	Status      string    `json:"status" bson:"status"`                   // active, paused, completed
-	CreatedAt   time.Time `json:"created_at" bson:"created_at"`
-	LastActive  time.Time `json:"last_active" bson:"last_active"`
-	Notes       string    `json:"notes,omitempty" bson:"notes,omitempty"`
+	ID         string    `json:"id" bson:"_id"`
+	Slug       string    `json:"slug" bson:"slug"`         // e.g., "playtika", "hackerone-xyz"
+	Name       string    `json:"name" bson:"name"`         // e.g., "Playtika Bug Bounty"
+	Platform   string    `json:"platform" bson:"platform"` // hackerone, bugcrowd, intigriti, independent
+	URL        string    `json:"url" bson:"url"`           // Program URL
+	Scope      Scope     `json:"scope" bson:"scope"`       // In-scope / out-of-scope
+	PayoutMin  int       `json:"payout_min,omitempty" bson:"payout_min,omitempty"`
+	PayoutMax  int       `json:"payout_max,omitempty" bson:"payout_max,omitempty"`
+	Rules      []string  `json:"rules,omitempty" bson:"rules,omitempty"` // Special rules / restrictions
+	Status     string    `json:"status" bson:"status"`                   // active, paused, completed
+	CreatedAt  time.Time `json:"created_at" bson:"created_at"`
+	LastActive time.Time `json:"last_active" bson:"last_active"`
+	Notes      string    `json:"notes,omitempty" bson:"notes,omitempty"`
 }
 
 // ============================================================================
@@ -134,46 +134,52 @@ const (
 
 // Finding represents a discovered vulnerability
 type Finding struct {
-	ID             string       `json:"id" bson:"_id"`
-	Program        string       `json:"program" bson:"program"`   // bounty program slug
-	State          FindingState `json:"state" bson:"state"`
-	Title          string       `json:"title" bson:"title"`
-	Description    string       `json:"description" bson:"description"`
-	Severity       string       `json:"severity" bson:"severity"` // critical, high, medium, low, info
-	VulnType       string       `json:"vuln_type" bson:"vuln_type"`
-	Target         string       `json:"target" bson:"target"`
-	URL            string       `json:"url" bson:"url"`
-	Endpoint       string       `json:"endpoint" bson:"endpoint"`
-	Parameter      string       `json:"parameter,omitempty" bson:"parameter,omitempty"`
-	Method         string       `json:"method,omitempty" bson:"method,omitempty"`
-	Headers        map[string]string `json:"headers,omitempty" bson:"headers,omitempty"`
-	Payload        string       `json:"payload,omitempty" bson:"payload,omitempty"`
-	
+	ID          string            `json:"id" bson:"_id"`
+	Program     string            `json:"program" bson:"program"` // bounty program slug
+	State       FindingState      `json:"state" bson:"state"`
+	Title       string            `json:"title" bson:"title"`
+	Description string            `json:"description" bson:"description"`
+	Severity    string            `json:"severity" bson:"severity"` // critical, high, medium, low, info
+	VulnType    string            `json:"vuln_type" bson:"vuln_type"`
+	Target      string            `json:"target" bson:"target"`
+	URL         string            `json:"url" bson:"url"`
+	Endpoint    string            `json:"endpoint" bson:"endpoint"`
+	Parameter   string            `json:"parameter,omitempty" bson:"parameter,omitempty"`
+	Method      string            `json:"method,omitempty" bson:"method,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty" bson:"headers,omitempty"`
+	Payload     string            `json:"payload,omitempty" bson:"payload,omitempty"`
+
 	// Detection info
-	DetectedBy     string    `json:"detected_by" bson:"detected_by"`
-	DetectedAt     time.Time `json:"detected_at" bson:"detected_at"`
-	RawOutput      string    `json:"raw_output,omitempty" bson:"raw_output,omitempty"`
-	
+	DetectedBy string    `json:"detected_by" bson:"detected_by"`
+	DetectedAt time.Time `json:"detected_at" bson:"detected_at"`
+	RawOutput  string    `json:"raw_output,omitempty" bson:"raw_output,omitempty"`
+
 	// Verification info
-	Verification   *Verification `json:"verification,omitempty" bson:"verification,omitempty"`
-	VerifiedBy     string    `json:"verified_by,omitempty" bson:"verified_by,omitempty"`
-	VerifiedAt     time.Time `json:"verified_at,omitempty" bson:"verified_at,omitempty"`
-	
+	Verification *Verification `json:"verification,omitempty" bson:"verification,omitempty"`
+	VerifiedBy   string        `json:"verified_by,omitempty" bson:"verified_by,omitempty"`
+	VerifiedAt   time.Time     `json:"verified_at,omitempty" bson:"verified_at,omitempty"`
+
 	// PoC info
-	PoC            *PoC      `json:"poc,omitempty" bson:"poc,omitempty"`
-	Evidence       []string  `json:"evidence,omitempty" bson:"evidence,omitempty"`
-	
+	PoC      *PoC     `json:"poc,omitempty" bson:"poc,omitempty"`
+	Evidence []string `json:"evidence,omitempty" bson:"evidence,omitempty"`
+
+	// Success-oracle (M1): machine-readable replay + its execution result.
+	// ReplayResult.Passed is the "replayed" ground-truth label (see DATA_PLAN.md)
+	// and gates the CANDIDATE/REPRODUCED → IMPACT_PROVEN transition.
+	ReplaySpec   *ReplaySpec   `json:"replay_spec,omitempty" bson:"replay_spec,omitempty"`
+	ReplayResult *OracleResult `json:"replay_result,omitempty" bson:"replay_result,omitempty"`
+
 	// Manual required info
-	ManualReason   string   `json:"manual_reason,omitempty" bson:"manual_reason,omitempty"`
-	
+	ManualReason string `json:"manual_reason,omitempty" bson:"manual_reason,omitempty"`
+
 	// Classification
-	OWASP          string   `json:"owasp,omitempty" bson:"owasp,omitempty"`
-	CWE            string   `json:"cwe,omitempty" bson:"cwe,omitempty"`
-	CVSSScore      float64  `json:"cvss_score,omitempty" bson:"cvss_score,omitempty"`
-	
+	OWASP     string  `json:"owasp,omitempty" bson:"owasp,omitempty"`
+	CWE       string  `json:"cwe,omitempty" bson:"cwe,omitempty"`
+	CVSSScore float64 `json:"cvss_score,omitempty" bson:"cvss_score,omitempty"`
+
 	// Manual notes
-	ManualNotes    string   `json:"manual_notes,omitempty" bson:"manual_notes,omitempty"`
-	Tags           []string `json:"tags,omitempty" bson:"tags,omitempty"`
+	ManualNotes string   `json:"manual_notes,omitempty" bson:"manual_notes,omitempty"`
+	Tags        []string `json:"tags,omitempty" bson:"tags,omitempty"`
 }
 
 // PoC represents a proof of concept
@@ -221,20 +227,20 @@ type DecisionLog struct {
 	Timestamp time.Time          `bson:"timestamp"`
 	SessionID string             `bson:"session_id"`
 	Target    string             `bson:"target"`
-	
+
 	// What the LLM was thinking
 	Context   string `bson:"context"`
 	Thinking  string `bson:"thinking"`
 	Decision  string `bson:"decision"`
 	Reasoning string `bson:"reasoning"`
-	
+
 	// What happened
-	Action    string `bson:"action"`
-	ToolUsed  string `bson:"tool_used,omitempty"`
-	ToolArgs  string `bson:"tool_args,omitempty"`
-	Result    string `bson:"result"`
-	Success   bool   `bson:"success"`
-	
+	Action   string `bson:"action"`
+	ToolUsed string `bson:"tool_used,omitempty"`
+	ToolArgs string `bson:"tool_args,omitempty"`
+	Result   string `bson:"result"`
+	Success  bool   `bson:"success"`
+
 	// For learning
 	Tags      []string `bson:"tags,omitempty"`
 	FindingID string   `bson:"finding_id,omitempty"`
@@ -246,15 +252,15 @@ type Consultation struct {
 	Program   string             `bson:"program"`
 	Timestamp time.Time          `bson:"timestamp"`
 	SessionID string             `bson:"session_id"`
-	
-	Question  string   `bson:"question"`
-	Context   string   `bson:"context"`
-	Options   []string `bson:"options,omitempty"`
-	Urgency   string   `bson:"urgency"` // blocking, can_continue, fyi
-	Category  string   `bson:"category"` // logic, scope, ethics, technical, priority
-	
-	Response     string    `bson:"response,omitempty"`
-	RespondedAt  time.Time `bson:"responded_at,omitempty"`
+
+	Question string   `bson:"question"`
+	Context  string   `bson:"context"`
+	Options  []string `bson:"options,omitempty"`
+	Urgency  string   `bson:"urgency"`  // blocking, can_continue, fyi
+	Category string   `bson:"category"` // logic, scope, ethics, technical, priority
+
+	Response    string    `bson:"response,omitempty"`
+	RespondedAt time.Time `bson:"responded_at,omitempty"`
 }
 
 // ============================================================================
@@ -263,13 +269,13 @@ type Consultation struct {
 
 // OpsecConfig represents operational security configuration
 type OpsecConfig struct {
-	Enabled       bool     `yaml:"enabled"`
-	ProxyChain    []Proxy  `yaml:"proxy_chain"`
-	MACSpoof      bool     `yaml:"mac_spoof"`
-	VPNEnabled    bool     `yaml:"vpn_enabled"`
-	TorEnabled    bool     `yaml:"tor_enabled"`
-	DNSServers    []string `yaml:"dns_servers"`
-	CleanEnv      bool     `yaml:"clean_env"`
+	Enabled    bool     `yaml:"enabled"`
+	ProxyChain []Proxy  `yaml:"proxy_chain"`
+	MACSpoof   bool     `yaml:"mac_spoof"`
+	VPNEnabled bool     `yaml:"vpn_enabled"`
+	TorEnabled bool     `yaml:"tor_enabled"`
+	DNSServers []string `yaml:"dns_servers"`
+	CleanEnv   bool     `yaml:"clean_env"`
 }
 
 // Proxy represents a proxy in the chain
@@ -355,14 +361,14 @@ type ScriptExecution struct {
 	SessionID    string             `bson:"session_id"`
 	Timestamp    time.Time          `bson:"timestamp"`
 	Runtime      string             `bson:"runtime"`      // "python" or "bash"
-	ScriptName   string             `bson:"script_name"`   // human-readable name
-	ScriptPath   string             `bson:"script_path"`   // saved script file
-	ArtifactLog  string             `bson:"artifact_log"`  // stdout/stderr log file
+	ScriptName   string             `bson:"script_name"`  // human-readable name
+	ScriptPath   string             `bson:"script_path"`  // saved script file
+	ArtifactLog  string             `bson:"artifact_log"` // stdout/stderr log file
 	ExitCode     int                `bson:"exit_code"`
 	Duration     time.Duration      `bson:"duration"`
 	Success      bool               `bson:"success"`
 	Error        string             `bson:"error,omitempty"`
-	SecretsUsed  []string           `bson:"secrets_used,omitempty"`  // key names only, not values
+	SecretsUsed  []string           `bson:"secrets_used,omitempty"` // key names only, not values
 	Dependencies []string           `bson:"dependencies,omitempty"` // pip packages installed
 }
 
@@ -373,6 +379,6 @@ type VectorStatus struct {
 	SessionID string             `bson:"session_id"`
 	Timestamp time.Time          `bson:"timestamp"`
 	VectorID  string             `bson:"vector_id"` // e.g., "IDOR-/api/v1/users/{id}"
-	State     string             `bson:"state"`      // EXHAUSTED, VULNERABLE, BLOCKED_BY_DESIGN
+	State     string             `bson:"state"`     // EXHAUSTED, VULNERABLE, BLOCKED_BY_DESIGN
 	Rationale string             `bson:"rationale"`
 }

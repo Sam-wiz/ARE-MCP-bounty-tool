@@ -906,6 +906,29 @@ func (s *Server) registerTools() {
 			},
 		},
 		{
+			Name: "verify_finding",
+			Description: "Success-oracle (M1): PROVE a finding's impact by EXECUTION, not prose. Replays the exploit against the live target and runs a per-class oracle that returns a deterministic PASS/FAIL. " +
+				"Supported classes: cors, idor, auth_bypass, open_redirect, ssrf. A PASS advances the finding to IMPACT_PROVEN and becomes a TRUSTED signal review_report will believe over the write-up. " +
+				"Provide finding_id (uses its stored replay_spec) OR an inline replay_spec. The pass rule is asymmetric: the attacker action must fire the signal AND a negative control must NOT (the counterfactual).",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"finding_id":     map[string]interface{}{"type": "string", "description": "Stored finding to verify (uses/updates its replay_spec + replay_result). Optional if replay_spec is given inline."},
+					"allow_mutation": map[string]interface{}{"type": "boolean", "description": "Lift the read-only blast-radius guard to permit mutating verbs (POST/PUT/PATCH/DELETE). Only set true after confirming the exploit targets a self-created CANARY resource, never a real user's data. Default false."},
+					"replay_spec": map[string]interface{}{
+						"type":        "object",
+						"description": "Machine-readable replay. Shape: {class, requests:[{role:exploit|control|setup, as:<identity label>, method, url, headers, body}], marker, expect:{signal, leak_fields, status_ok, redirect_to, within_secs}}. Use {{marker}} in url/headers/body for the per-run token. Identity labels (as) resolve to auth headers from ORACLE_ID_<LABEL> in .env.",
+						"properties": map[string]interface{}{
+							"class":    map[string]interface{}{"type": "string", "enum": []string{"cors", "idor", "auth_bypass", "open_redirect", "ssrf"}},
+							"requests": map[string]interface{}{"type": "array", "description": "Ordered requests to replay."},
+							"marker":   map[string]interface{}{"type": "string", "description": "Attacker host / canary (cors, open_redirect). SSRF sets this from the OOB token automatically."},
+							"expect":   map[string]interface{}{"type": "object", "description": "Success criteria: leak_fields (data_leak), status_ok (state_change), redirect_to (redirect), within_secs (oob_callback)."},
+						},
+					},
+				},
+			},
+		},
+		{
 			Name: "request_horizon",
 			Description: "Ask the Director (a strong model) for NEW, untried attack hypotheses when you're stuck on the active program. " +
 				"It is fed the exploration ledger (EXHAUSTED/BLOCKED/VULNERABLE vectors) and must not repeat them. " +
@@ -978,6 +1001,50 @@ func (s *Server) registerTools() {
 				"properties": map[string]interface{}{
 					"program": map[string]interface{}{"type": "string", "description": "Program slug; omit for all programs."},
 				},
+			},
+		},
+
+		// === WIRELESS ATTACK CHAIN ===
+		{
+			Name: "wifi_attack",
+			Description: "Orchestrated WPS/WPA2 attack chain against an AP you own. " +
+				"Steps: enable monitor mode → wash WPS scan → reaver Pixie Dust → fallback brute-force (or handshake/PMKID path). " +
+				"Requires a USB Wi-Fi adapter with monitor+injection support (e.g. Alfa AWUS036NHA) plugged into Kali Linux. " +
+				"Does NOT work on macOS built-in Wi-Fi.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"interface": map[string]interface{}{
+						"type":        "string",
+						"description": "Wireless interface name before monitor mode (e.g. wlan0). Must be the USB adapter.",
+					},
+					"ssid": map[string]interface{}{
+						"type":        "string",
+						"description": "Target network name (SSID). Used to auto-detect BSSID from wash scan output.",
+					},
+					"bssid": map[string]interface{}{
+						"type":        "string",
+						"description": "Target AP MAC address (e.g. AA:BB:CC:DD:EE:FF). If omitted, auto-detected via wash scan.",
+					},
+					"channel": map[string]interface{}{
+						"type":        "number",
+						"description": "AP channel (1-13 for 2.4GHz, 36+ for 5GHz). Required when bssid is set manually.",
+					},
+					"attack": map[string]interface{}{
+						"type": "string",
+						"enum": []string{"wps_pixie", "wps_brute", "handshake", "pmkid"},
+						"description": "Attack method: " +
+							"wps_pixie=Pixie Dust then brute-force fallback (default, fastest); " +
+							"wps_brute=bully WPS brute-force; " +
+							"handshake=deauth+capture+aircrack-ng; " +
+							"pmkid=passive PMKID capture+hashcat (no deauth needed).",
+					},
+					"wordlist": map[string]interface{}{
+						"type":        "string",
+						"description": "Path to wordlist for handshake/PMKID cracking (default: /usr/share/wordlists/rockyou.txt).",
+					},
+				},
+				"required": []string{"interface"},
 			},
 		},
 	}
