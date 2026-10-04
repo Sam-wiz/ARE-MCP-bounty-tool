@@ -1,0 +1,36 @@
+# Airmon-ng - Monitor mode manager
+name: airmon-ng
+category: wireless.setup
+version: "1.7"
+description: Enable/disable monitor mode on wireless interfaces; kills interfering processes
+
+install:
+  method: apt
+  command: apt-get install -y aircrack-ng
+  verify: airmon-ng --help 2>&1 | head -1
+
+execute:
+  command: airmon-ng {action} {interface}
+  input:
+    action:
+      type: string
+      required: true
+      enum: [start, stop, check, "check kill"]
+      description: "start=enable monitor mode, stop=disable, check=show conflicting procs, check kill=kill them"
+    interface:
+      type: string
+      required: true
+      description: Wireless interface name (e.g., wlan0)
+  output:
+    format: text
+    type: interface_status
+  timeout: 30
+
+capabilities:
+  - monitor_mode
+  - interface_management
+
+resources:
+  cpu: low
+  memory: low
+  network: none

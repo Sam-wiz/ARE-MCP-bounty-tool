@@ -1,0 +1,39 @@
+# Aircrack-ng - WPA/WPA2 handshake cracker
+name: aircrack-ng
+category: wireless.cracking
+version: "1.7"
+description: WPA/WPA2 key cracker using captured handshake .cap files
+
+install:
+  method: apt
+  command: apt-get install -y aircrack-ng
+  verify: aircrack-ng --help 2>&1 | head -1
+
+execute:
+  command: aircrack-ng -w {wordlist} -b {bssid} {capture_file}
+  input:
+    capture_file:
+      type: string
+      required: true
+      description: Path to .cap file containing WPA handshake
+    bssid:
+      type: string
+      required: true
+      description: Target AP MAC address (e.g., AA:BB:CC:DD:EE:FF)
+    wordlist:
+      type: string
+      default: /usr/share/wordlists/rockyou.txt
+      description: Path to wordlist file
+  output:
+    format: text
+    type: cracked_key
+  timeout: 86400
+
+capabilities:
+  - wpa_cracking
+  - handshake_analysis
+
+resources:
+  cpu: high
+  memory: medium
+  network: none

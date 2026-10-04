@@ -1,0 +1,51 @@
+# Aireplay-ng - Packet injection and deauthentication
+name: aireplay-ng
+category: wireless.injection
+version: "1.7"
+description: Inject frames to force WPA handshake capture via deauth or fake-auth attacks
+
+install:
+  method: apt
+  command: apt-get install -y aircrack-ng
+  verify: aireplay-ng --help 2>&1 | head -1
+
+execute:
+  command: aireplay-ng --deauth {count} -a {bssid} {client_flag} {interface}
+  input:
+    interface:
+      type: string
+      required: true
+      description: Monitor mode interface (e.g., wlan0mon)
+    bssid:
+      type: string
+      required: true
+      description: Target AP MAC address
+    attack:
+      type: number
+      default: 0
+      description: "Attack type: 0=deauth, 1=fake-auth, 3=arp-replay, 4=chopchop, 9=inject-test"
+    count:
+      type: number
+      default: 5
+      description: Number of deauth frames to send (0=continuous)
+    client:
+      type: string
+      description: Target specific client MAC (omit to broadcast deauth to all)
+    client_flag:
+      type: string
+      default: ""
+      description: Auto-constructed from client field
+  output:
+    format: text
+    type: injection_result
+  timeout: 60
+
+capabilities:
+  - deauthentication
+  - handshake_forcing
+  - packet_injection
+
+resources:
+  cpu: low
+  memory: low
+  network: high

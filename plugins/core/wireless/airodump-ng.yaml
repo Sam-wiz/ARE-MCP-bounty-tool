@@ -1,0 +1,47 @@
+# Airodump-ng - 802.11 packet capture and AP scanner
+name: airodump-ng
+category: wireless.capture
+version: "1.7"
+description: Capture 802.11 frames, enumerate APs and clients, dump WPA handshakes
+
+install:
+  method: apt
+  command: apt-get install -y aircrack-ng
+  verify: airodump-ng --help 2>&1 | head -1
+
+execute:
+  command: airodump-ng --bssid {bssid} --channel {channel} --write {output_prefix} {interface}
+  input:
+    interface:
+      type: string
+      required: true
+      description: Monitor mode interface (e.g., wlan0mon)
+    bssid:
+      type: string
+      description: Filter capture to specific AP BSSID
+    channel:
+      type: number
+      description: Lock to specific channel (1-14 for 2.4GHz, 36+ for 5GHz)
+    output_prefix:
+      type: string
+      default: /tmp/capture
+      description: Output file prefix (creates <prefix>-01.cap, <prefix>-01.csv)
+    scan_only:
+      type: boolean
+      default: false
+      description: Scan all channels without writing (use for discovery)
+  output:
+    format: pcap
+    type: packet_capture
+  timeout: 300
+
+capabilities:
+  - ap_discovery
+  - client_enumeration
+  - handshake_capture
+  - wps_detection
+
+resources:
+  cpu: low
+  memory: medium
+  network: high

@@ -1,0 +1,38 @@
+# Websocat - WebSocket CLI client
+name: websocat
+category: web.websocket
+version: "1.13.0"
+description: Command-line WebSocket client (like curl for WebSockets). Supports piping, proxying, and connecting to ws:// / wss:// endpoints.
+
+install:
+  method: cargo
+  command: cargo install websocat
+  verify: websocat --version
+
+execute:
+  command: websocat {extra_args} {url}
+  input:
+    url:
+      type: string
+      required: true
+      description: WebSocket URL to connect to (ws:// or wss://)
+    extra_args:
+      type: string
+      required: false
+      default: ""
+      description: Additional arguments (e.g., --origin, -H, --text, --binary, -E)
+  output:
+    format: text
+    type: websocket_data
+  timeout: 3600
+
+capabilities:
+  - websocket_client
+  - websocket_proxy
+  - websocket_fuzzing
+  - ws_message_inspection
+
+resources:
+  cpu: low
+  memory: low
+  network: medium

@@ -1,0 +1,43 @@
+# hcxdumptool - PMKID capture (no deauth needed)
+name: hcxdumptool
+category: wireless.capture
+version: "6.3"
+description: Capture PMKID frames passively (no client deauth required); faster than handshake method
+
+install:
+  method: apt
+  command: apt-get install -y hcxdumptool hcxtools
+  verify: hcxdumptool --version
+
+execute:
+  command: hcxdumptool -i {interface} -o {output_file} --enable_status=1 {filter_flag}
+  input:
+    interface:
+      type: string
+      required: true
+      description: Monitor mode interface (e.g., wlan0mon)
+    output_file:
+      type: string
+      default: /tmp/pmkid_capture.pcapng
+      description: Output pcapng file (convert with hcxpcapngtool for hashcat)
+    bssid_filter:
+      type: string
+      description: Target specific BSSID only (optional)
+    filter_flag:
+      type: string
+      default: ""
+      description: Auto-constructed from bssid_filter
+  output:
+    format: pcapng
+    type: pmkid_capture
+  timeout: 120
+
+capabilities:
+  - pmkid_capture
+  - passive_attack
+  - handshake_capture
+
+resources:
+  cpu: low
+  memory: low
+  network: high

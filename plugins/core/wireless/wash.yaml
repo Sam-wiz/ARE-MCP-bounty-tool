@@ -1,0 +1,38 @@
+# Wash - WPS-enabled AP scanner
+name: wash
+category: wireless.recon
+version: "1.6.6"
+description: Scan for WPS-enabled access points, report BSSID, channel, RSSI, WPS version and lock state
+
+install:
+  method: brew
+  command: brew install reaver
+  verify: wash --help 2>&1 | head -1
+
+execute:
+  command: wash -i {interface} {channel_flag}
+  input:
+    interface:
+      type: string
+      required: true
+      description: Monitor mode interface (e.g., wlan0mon)
+    channel:
+      type: number
+      description: Scan specific channel only (omit to scan all)
+    channel_flag:
+      type: string
+      default: ""
+      description: Auto-constructed from channel field
+  output:
+    format: text
+    type: ap_list
+  timeout: 60
+
+capabilities:
+  - wps_discovery
+  - ap_enumeration
+
+resources:
+  cpu: low
+  memory: low
+  network: high

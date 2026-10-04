@@ -1,0 +1,43 @@
+# Bully - WPS brute-force (alternative to reaver)
+name: bully
+category: wireless.wps
+version: "1.4"
+description: WPS PIN brute-force; often more reliable than reaver against stubborn APs
+
+install:
+  method: apt
+  command: apt-get install -y bully
+  verify: bully --help 2>&1 | head -1
+
+execute:
+  command: bully -b {bssid} -c {channel} -d -v 3 {interface}
+  input:
+    interface:
+      type: string
+      required: true
+      description: Monitor mode interface (e.g., wlan0mon)
+    bssid:
+      type: string
+      required: true
+      description: Target AP BSSID
+    channel:
+      type: number
+      required: true
+      description: AP channel number
+    extra_args:
+      type: string
+      default: ""
+      description: Additional bully arguments
+  output:
+    format: text
+    type: wps_pin_and_psk
+  timeout: 36000
+
+capabilities:
+  - wps_pin_attack
+  - wpa_key_recovery
+
+resources:
+  cpu: low
+  memory: low
+  network: high

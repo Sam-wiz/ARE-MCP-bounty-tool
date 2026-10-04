@@ -1,0 +1,52 @@
+# Reaver - WPS PIN brute-force and Pixie Dust
+name: reaver
+category: wireless.wps
+version: "1.6.6"
+description: WPS PIN brute-force attack; supports Pixie Dust (-K 1) for instant crack on vulnerable APs
+
+install:
+  method: brew
+  command: brew install reaver
+  verify: reaver --help 2>&1 | head -1
+
+execute:
+  command: reaver -i {interface} -b {bssid} -c {channel} {pixie_flag} {extra_args} -vv
+  input:
+    interface:
+      type: string
+      required: true
+      description: Monitor mode interface (e.g., wlan0mon)
+    bssid:
+      type: string
+      required: true
+      description: Target AP BSSID (get from wash/airodump-ng)
+    channel:
+      type: number
+      required: true
+      description: AP channel number
+    pixie_dust:
+      type: boolean
+      default: true
+      description: Use Pixie Dust attack (-K 1) — try this first, cracks in seconds on vulnerable routers
+    pixie_flag:
+      type: string
+      default: "-K 1"
+      description: Auto-set based on pixie_dust field
+    extra_args:
+      type: string
+      default: "-L -N -d 15 -T 1"
+      description: Extra flags; defaults add no-nacks, delay, timeout to handle WPS lockout
+  output:
+    format: text
+    type: wps_pin_and_psk
+  timeout: 36000
+
+capabilities:
+  - wps_pin_attack
+  - pixie_dust
+  - wpa_key_recovery
+
+resources:
+  cpu: low
+  memory: low
+  network: high

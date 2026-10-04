@@ -1,0 +1,35 @@
+# hcxpcapngtool - Convert pcapng to hashcat format
+name: hcxpcapngtool
+category: wireless.conversion
+version: "6.3"
+description: Convert hcxdumptool pcapng captures to hashcat WPA-PMKID-PBKDF2 (.hc22000) format
+
+install:
+  method: apt
+  command: apt-get install -y hcxtools
+  verify: hcxpcapngtool --version
+
+execute:
+  command: hcxpcapngtool -o {output_file} {input_file}
+  input:
+    input_file:
+      type: string
+      required: true
+      description: Input .pcapng file from hcxdumptool
+    output_file:
+      type: string
+      default: /tmp/hashes.hc22000
+      description: Output hashcat-format file (mode 22000 for WPA2, 22001 for WPA3)
+  output:
+    format: text
+    type: hash_file
+  timeout: 60
+
+capabilities:
+  - format_conversion
+  - hashcat_prep
+
+resources:
+  cpu: low
+  memory: low
+  network: none

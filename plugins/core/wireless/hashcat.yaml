@@ -1,0 +1,53 @@
+# Hashcat - GPU-accelerated WPA/WPA2 cracking
+name: hashcat
+category: wireless.cracking
+version: "6.2.6"
+description: GPU-accelerated password cracker; use mode 22000 for WPA2-PMKID/handshake, 22001 for WPA3
+
+install:
+  method: apt
+  command: apt-get install -y hashcat
+  verify: hashcat --version
+
+execute:
+  command: hashcat -m {mode} -a {attack_mode} {hash_file} {wordlist} {rule_flag} --status
+  input:
+    hash_file:
+      type: string
+      required: true
+      description: Hash file (.hc22000 from hcxpcapngtool, or .hccapx)
+    wordlist:
+      type: string
+      default: /usr/share/wordlists/rockyou.txt
+      description: Wordlist path
+    mode:
+      type: number
+      default: 22000
+      description: "Hash mode: 22000=WPA2 PMKID+handshake, 22001=WPA3, 2500=legacy WPA (deprecated)"
+    attack_mode:
+      type: number
+      default: 0
+      description: "Attack mode: 0=dictionary, 1=combination, 3=mask/brute-force, 6=hybrid"
+    rules:
+      type: string
+      description: Rule file path (e.g., /usr/share/hashcat/rules/best64.rule)
+    rule_flag:
+      type: string
+      default: ""
+      description: Auto-constructed from rules field
+  output:
+    format: text
+    type: cracked_password
+  timeout: 86400
+
+capabilities:
+  - wpa_cracking
+  - pmkid_cracking
+  - dictionary_attack
+  - brute_force
+  - rule_based_attack
+
+resources:
+  cpu: high
+  memory: high
+  network: none
