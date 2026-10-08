@@ -10,7 +10,7 @@ install:
   verify: docker images | grep mobsf
 
 execute:
-  command: curl -F "file=@{apk_path}" http://localhost:8000/api/v1/upload -H "Authorization: {api_key}"
+  command: 'curl -F "file=@{apk_path}" http://localhost:8000/api/v1/upload -H "Authorization: {api_key}"'
   input:
     apk_path:
       type: string

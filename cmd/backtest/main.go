@@ -5,9 +5,10 @@
 // Bugcrowd triager actually decided.
 //
 // Scoring intent:
-//   rejected / not-applicable  → panel SHOULD block (REJECT)   [would've saved a bad submission]
-//   accepted                   → panel should NOT block (real) [must not kill money-makers]
-//   duplicate                  → panel should NOT block (real; dup is about being first, not validity)
+//
+//	rejected / not-applicable  → panel SHOULD block (REJECT)   [would've saved a bad submission]
+//	accepted                   → panel should NOT block (real) [must not kill money-makers]
+//	duplicate                  → panel should NOT block (real; dup is about being first, not validity)
 package main
 
 import (
@@ -125,9 +126,9 @@ func main() {
 		verdict := string(rev.Verdict)
 		correct := scoreCorrect(s.State, rev.Verdict)
 		results = append(results, result{s.State, verdict, s.Title, correct})
-		mark := "[ERROR]"
+		mark := "✗"
 		if correct {
-			mark = "[OK]"
+			mark = "✓"
 		}
 		fmt.Printf("%s  real=%-9s panel=%-16s  %s\n", mark, s.State, verdict, short(s.Title))
 

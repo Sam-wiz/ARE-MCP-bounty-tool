@@ -10,7 +10,7 @@ install:
   verify: jwt_tool -h
 
 execute:
-  command: jwt_tool {token} -M at -t {target} -rh "Authorization: Bearer {token}"
+  command: 'jwt_tool {token} -M at -t {target} -rh "Authorization: Bearer {token}"'
   input:
     token:
       type: string
