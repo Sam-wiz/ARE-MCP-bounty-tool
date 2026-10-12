@@ -105,15 +105,17 @@ func (e *Engine) handleDownloadApp(ctx context.Context, args map[string]interfac
 			if email == "" || token == "" {
 				return errorResult("google-play source requires 'email' and 'token' parameters. Use 'apkpure' source for no-auth downloads."), nil
 			}
-			cmd = fmt.Sprintf("apkeep -a %s -d google-play -e %s -t %s -o %s 2>&1",
+			cmd = fmt.Sprintf("apkeep -a %s -d google-play -e %s -t %s %s 2>&1",
 				ShellEscape(packageID), ShellEscape(email), ShellEscape(token), ShellEscape(outputDir))
 			results.WriteString("⚠️  Google Play source — use a burner account (ToS risk)\n\n")
 		case "f-droid":
-			cmd = fmt.Sprintf("apkeep -a %s -d f-droid -o %s 2>&1",
+			cmd = fmt.Sprintf("apkeep -a %s -d f-droid %s 2>&1",
 				ShellEscape(packageID), ShellEscape(outputDir))
 			results.WriteString("🔓 F-Droid source — no auth needed, FOSS apps only\n\n")
 		default: // apkpure (default, no auth)
-			cmd = fmt.Sprintf("apkeep -a %s -o %s 2>&1",
+			// apkeep takes OUTPATH as a positional arg; "-o" is --options.
+			// Passing "-o <dir>" left OUTPATH empty -> exit 2 (BUG-5).
+			cmd = fmt.Sprintf("apkeep -a %s -d apk-pure %s 2>&1",
 				ShellEscape(packageID), ShellEscape(outputDir))
 			results.WriteString("🔓 APKPure source — no auth needed\n\n")
 		}
