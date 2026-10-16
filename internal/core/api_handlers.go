@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -249,9 +250,16 @@ func (e *Engine) handleHTTPRequest(ctx context.Context, args map[string]interfac
 		method = strings.ToUpper(m)
 	}
 
+	// Optional request body (POST/PUT/PATCH probing). api_test remains the
+	// better choice for heavy bodies or authenticated differential tests.
+	var reqBody io.Reader
+	if body, ok := args["body"].(string); ok && body != "" {
+		reqBody = strings.NewReader(body)
+	}
+
 	// Check if URL returns actual data (egress through the configured proxy)
 	client := e.newHTTPClient(15 * time.Second)
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
 	if err != nil {
 		return errorResult(fmt.Sprintf("Invalid request: %v", err)), nil
 	}

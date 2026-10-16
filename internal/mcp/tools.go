@@ -624,6 +624,10 @@ func (s *Server) registerTools() {
 						"type":        "object",
 						"description": "Request headers as key-value pairs",
 					},
+					"body": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional request body for POST/PUT/PATCH",
+					},
 				},
 				"required": []string{"url"},
 			},
