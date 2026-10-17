@@ -23,6 +23,12 @@ go.work.sum
 .DS_Store
 
 # Config with secrets
+.env
+.env.*
+!.env.example
+.tools/
+bounties/
+artifacts/
 config/config.yaml
 config/secrets.yaml
 *.pem
@@ -51,7 +57,7 @@ reports/*.md
 *.flow
 
 # Nuclei cache
-~/.nuclei/
+.nuclei/
 
 # Redis/Mongo local data
 data/
@@ -71,6 +77,18 @@ coverage.html
 !config/opsec.yaml
 !config/checklists/
 
-# Keep scripts
-!scripts/
-!scripts/**
+# Python verification helpers
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local caches, credentials and course handout
+.cache/
+.kube/
+kubeconfig
+kubeconfig.*
+/Advanced Cloud FInal Project*.pdf

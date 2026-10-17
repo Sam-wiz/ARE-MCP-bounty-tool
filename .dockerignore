@@ -1,0 +1,7 @@
+**
+!go.mod
+!go.sum
+!cmd/**
+!internal/**
+!plugins/**
+!config/config.example.yaml
