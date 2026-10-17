@@ -66,3 +66,23 @@ install: build-cli
 	@ln -sf $(PWD)/bin/hack-ai /usr/local/bin/hack-ai
 	@echo "✅ hack-ai installed to /usr/local/bin/hack-ai"
 
+
+# Local Advanced DevOps runtime. Does not commit or publish anything.
+.PHONY: local-up local-demo dashboards verify-recovery compose-up source-identity
+local-up:
+	bash scripts/local_up.sh
+local-demo:
+	bash scripts/local_demo.sh
+dashboards:
+	bash scripts/port_forward.sh
+verify-recovery:
+	python3 scripts/verify_recovery.py
+compose-up:
+	python3 scripts/init_local_env.py
+	docker compose --env-file .env.local up --build -d
+source-identity:
+	python3 scripts/source_identity.py
+
+.PHONY: verify-observability
+verify-observability:
+	python3 scripts/verify_observability.py

@@ -1,0 +1,53 @@
+# Optional Docker-only development. Kubernetes remains the assessed runtime.
+services:
+  app:
+    build: .
+    ports: ['127.0.0.1:8080:8080']
+    environment:
+      API_TOKEN: ${API_TOKEN:?run scripts/init_local_env.py}
+      MONGODB_URI: mongodb://are_app:${MONGO_APP_PASSWORD}@mongodb:27017/hack_ai_v2?authSource=hack_ai_v2
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      WORKSPACE_SKIP_VENV: '1'
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    depends_on:
+      mongodb: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes: [workspaces:/app/bounties]
+    read_only: true
+    tmpfs: ['/tmp:uid=10001,gid=10001']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  mongodb:
+    image: mongo:7.0.16
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
+    volumes:
+      - mongo:/data/db
+      - ./deploy/base/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7.4.2-alpine
+    environment: {REDIS_PASSWORD: '${REDIS_PASSWORD}'}
+    command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes: [redis:/data]
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  jaeger:
+    image: jaegertracing/all-in-one:1.65.0
+    environment: {COLLECTOR_OTLP_ENABLED: 'true', MEMORY_MAX_TRACES: '10000'}
+    ports: ['127.0.0.1:16686:16686']
+volumes:
+  workspaces:
+  mongo:
+  redis:

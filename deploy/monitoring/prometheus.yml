@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 10s
+rule_files: [/etc/prometheus/alerts.yml]
+scrape_configs:
+  - job_name: are-mcp
+    static_configs:
+      - targets: [are-mcp:8080]
