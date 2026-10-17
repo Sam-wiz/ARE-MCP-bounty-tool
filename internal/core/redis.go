@@ -23,11 +23,16 @@ const (
 
 // NewRedisClient creates a new Redis client
 func NewRedisClient(addr string) (*RedisClient, error) {
+	return NewRedisClientWithOptions(addr, "", 0)
+}
+
+func NewRedisClientWithOptions(addr, password string, db int) (*RedisClient, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:        addr,
-		Password:    "",
-		DB:          0,
-		DialTimeout: 5 * time.Second,
+		Addr:                  addr,
+		Password:              password,
+		DB:                    db,
+		DialTimeout:           5 * time.Second,
+		ContextTimeoutEnabled: true,
 	})
 
 	// Ping to verify connection
@@ -35,11 +40,14 @@ func NewRedisClient(addr string) (*RedisClient, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
+		_ = client.Close()
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
 	return &RedisClient{client: client}, nil
 }
+
+func (r *RedisClient) Ping(ctx context.Context) error { return r.client.Ping(ctx).Err() }
 
 // Close closes the Redis connection
 func (r *RedisClient) Close() error {

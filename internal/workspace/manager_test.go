@@ -6,6 +6,12 @@ import (
 	"testing"
 )
 
+// Filesystem tests should not install Python packages or require internet access.
+func TestMain(m *testing.M) {
+	_ = os.Setenv("WORKSPACE_SKIP_VENV", "1")
+	os.Exit(m.Run())
+}
+
 func TestNewManager(t *testing.T) {
 	m := NewManager("/tmp/test-bounty")
 	if m == nil {

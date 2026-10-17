@@ -57,8 +57,12 @@ func (e *Engine) handleSetTarget(ctx context.Context, args map[string]interface{
 	e.setActiveScope(types.Scope{InScope: inScope, OutOfScope: outOfScope})
 
 	// Persist session to MongoDB
+	persisted := false
 	if e.config.MongoDB != nil {
-		e.config.MongoDB.SaveSession(ctx, e.session)
+		if err := e.config.MongoDB.SaveSession(ctx, e.session); err != nil {
+			return errorResult("Cannot persist session"), nil
+		}
+		persisted = true
 	}
 
 	result := fmt.Sprintf(`Target set successfully:
@@ -66,9 +70,9 @@ func (e *Engine) handleSetTarget(ctx context.Context, args map[string]interface{
 - Session ID: %s
 - In Scope: %v
 - Out of Scope: %v
-- Session saved to MongoDB: ✅
+- Session saved to MongoDB: %t
 
-Ready for reconnaissance. Use recon_discover to start.`, domain, e.session.ID, inScope, outOfScope)
+Ready for reconnaissance. Use recon_discover to start.`, domain, e.session.ID, inScope, outOfScope, persisted)
 
 	return successResult(result), nil
 }

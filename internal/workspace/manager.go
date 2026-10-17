@@ -38,66 +38,68 @@ func (m *Manager) Create(programName string) (*Workspace, error) {
 	// Sanitize program name for filesystem
 	safeName := sanitizeName(programName)
 	workspacePath := filepath.Join(m.baseDir, fmt.Sprintf("bounty-%s", safeName))
-	
+
 	// Create base directory
 	if err := os.MkdirAll(workspacePath, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
-	
+
 	// Create standard directories
 	dirs := map[string]string{
-		"recon":        filepath.Join(workspacePath, "recon"),
-		"recon/subs":   filepath.Join(workspacePath, "recon", "subdomains"),
-		"recon/urls":   filepath.Join(workspacePath, "recon", "urls"),
-		"recon/techs":  filepath.Join(workspacePath, "recon", "technologies"),
-		"recon/ports":  filepath.Join(workspacePath, "recon", "ports"),
-		"findings":     filepath.Join(workspacePath, "findings"),
-		"findings/raw": filepath.Join(workspacePath, "findings", "raw"),
-		"findings/verified": filepath.Join(workspacePath, "findings", "verified"),
-		"evidence":     filepath.Join(workspacePath, "evidence"),
+		"recon":                filepath.Join(workspacePath, "recon"),
+		"recon/subs":           filepath.Join(workspacePath, "recon", "subdomains"),
+		"recon/urls":           filepath.Join(workspacePath, "recon", "urls"),
+		"recon/techs":          filepath.Join(workspacePath, "recon", "technologies"),
+		"recon/ports":          filepath.Join(workspacePath, "recon", "ports"),
+		"findings":             filepath.Join(workspacePath, "findings"),
+		"findings/raw":         filepath.Join(workspacePath, "findings", "raw"),
+		"findings/verified":    filepath.Join(workspacePath, "findings", "verified"),
+		"evidence":             filepath.Join(workspacePath, "evidence"),
 		"evidence/screenshots": filepath.Join(workspacePath, "evidence", "screenshots"),
-		"evidence/har": filepath.Join(workspacePath, "evidence", "har"),
-		"evidence/videos": filepath.Join(workspacePath, "evidence", "videos"),
-		"reports":      filepath.Join(workspacePath, "reports"),
-		"reports/draft": filepath.Join(workspacePath, "reports", "draft"),
-		"reports/final": filepath.Join(workspacePath, "reports", "final"),
-		"notes":        filepath.Join(workspacePath, "notes"),
-		"tools":        filepath.Join(workspacePath, "tools"),
-		"tools/output": filepath.Join(workspacePath, "tools", "output"),
-		"tools/custom": filepath.Join(workspacePath, "tools", "custom"),
-		"logs":         filepath.Join(workspacePath, "logs"),
-		"poc":          filepath.Join(workspacePath, "poc"),
-		"tests":        filepath.Join(workspacePath, "tests"),
-		"artifacts":    filepath.Join(workspacePath, "artifacts"),
+		"evidence/har":         filepath.Join(workspacePath, "evidence", "har"),
+		"evidence/videos":      filepath.Join(workspacePath, "evidence", "videos"),
+		"reports":              filepath.Join(workspacePath, "reports"),
+		"reports/draft":        filepath.Join(workspacePath, "reports", "draft"),
+		"reports/final":        filepath.Join(workspacePath, "reports", "final"),
+		"notes":                filepath.Join(workspacePath, "notes"),
+		"tools":                filepath.Join(workspacePath, "tools"),
+		"tools/output":         filepath.Join(workspacePath, "tools", "output"),
+		"tools/custom":         filepath.Join(workspacePath, "tools", "custom"),
+		"logs":                 filepath.Join(workspacePath, "logs"),
+		"poc":                  filepath.Join(workspacePath, "poc"),
+		"tests":                filepath.Join(workspacePath, "tests"),
+		"artifacts":            filepath.Join(workspacePath, "artifacts"),
 	}
-	
+
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
-	
+
 	ws := &Workspace{
 		Name:        programName,
 		Path:        workspacePath,
 		CreatedAt:   time.Now(),
 		Directories: dirs,
 	}
-	
+
 	// Create workspace metadata file
 	if err := m.saveMetadata(ws); err != nil {
 		return nil, err
 	}
-	
+
 	// Create initial files
 	if err := m.createInitialFiles(ws); err != nil {
 		return nil, err
 	}
 
 	// Provision Python venv with pre-seeded packages
-	if err := m.ProvisionVenv(workspacePath); err != nil {
-		log.Printf("Warning: Failed to provision venv for %s: %v", programName, err)
-		// Non-fatal — workspace still usable, just no venv
+	if os.Getenv("WORKSPACE_SKIP_VENV") != "1" {
+		if err := m.ProvisionVenv(workspacePath); err != nil {
+			log.Printf("Warning: Failed to provision venv for %s: %v", programName, err)
+			// Non-fatal — workspace still usable, just no venv
+		}
 	}
 
 	return ws, nil
@@ -107,11 +109,11 @@ func (m *Manager) Create(programName string) (*Workspace, error) {
 func (m *Manager) Get(programName string) (*Workspace, error) {
 	safeName := sanitizeName(programName)
 	workspacePath := filepath.Join(m.baseDir, fmt.Sprintf("bounty-%s", safeName))
-	
+
 	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("workspace not found: %s", programName)
 	}
-	
+
 	return m.loadMetadata(workspacePath)
 }
 
@@ -121,7 +123,7 @@ func (m *Manager) List() ([]*Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var workspaces []*Workspace
 	for _, entry := range entries {
 		if entry.IsDir() && len(entry.Name()) > 7 && entry.Name()[:7] == "bounty-" {
@@ -131,7 +133,7 @@ func (m *Manager) List() ([]*Workspace, error) {
 			}
 		}
 	}
-	
+
 	return workspaces, nil
 }
 
@@ -190,11 +192,11 @@ Created: %s
 - [ ] Report submitted
 
 `, ws.Name, ws.CreatedAt.Format(time.RFC1123))
-	
+
 	if err := os.WriteFile(filepath.Join(ws.Path, "README.md"), []byte(readme), 0644); err != nil {
 		return err
 	}
-	
+
 	// Create scope.txt template
 	scope := `# Scope
 
@@ -210,7 +212,7 @@ Created: %s
 	if err := os.WriteFile(filepath.Join(ws.Path, "scope.txt"), []byte(scope), 0644); err != nil {
 		return err
 	}
-	
+
 	// Create notes template
 	notes := fmt.Sprintf(`# Notes - %s
 
@@ -228,11 +230,11 @@ Created: %s
 ## Ideas
 
 `, ws.Name, time.Now().Format("2006-01-02"))
-	
+
 	if err := os.WriteFile(filepath.Join(ws.Directories["notes"], "notes.md"), []byte(notes), 0644); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -243,7 +245,7 @@ func (m *Manager) saveMetadata(ws *Workspace) error {
   "path": "%s",
   "created_at": "%s"
 }`, ws.Name, ws.Path, ws.CreatedAt.Format(time.RFC3339))
-	
+
 	return os.WriteFile(filepath.Join(ws.Path, ".workspace.json"), []byte(metadata), 0644)
 }
 
@@ -263,7 +265,7 @@ func (m *Manager) loadMetadata(path string) (*Workspace, error) {
 			},
 		}, nil
 	}
-	
+
 	// Parse JSON (simplified)
 	_ = data
 	return &Workspace{
@@ -286,8 +288,8 @@ func (m *Manager) loadMetadata(path string) (*Workspace, error) {
 func sanitizeName(name string) string {
 	safe := ""
 	for _, r := range name {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || 
-		   (r >= '0' && r <= '9') || r == '-' || r == '_' {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '-' || r == '_' {
 			safe += string(r)
 		} else if r == ' ' {
 			safe += "-"
@@ -302,10 +304,10 @@ func (ws *Workspace) AddFinding(id, title, severity string, verified bool) (stri
 	if verified {
 		dir = ws.Directories["findings/verified"]
 	}
-	
+
 	filename := fmt.Sprintf("%s-%s.md", severity, id)
 	path := filepath.Join(dir, filename)
-	
+
 	content := fmt.Sprintf(`# %s
 
 **ID:** %s
@@ -331,7 +333,7 @@ func (ws *Workspace) AddFinding(id, title, severity string, verified bool) (stri
 ## Remediation
 
 `, title, id, severity, verified, time.Now().Format(time.RFC3339))
-	
+
 	return path, os.WriteFile(path, []byte(content), 0644)
 }
 
@@ -339,10 +341,10 @@ func (ws *Workspace) AddFinding(id, title, severity string, verified bool) (stri
 func (ws *Workspace) SaveToolOutput(toolName, target string, output []byte) (string, error) {
 	dir := filepath.Join(ws.Directories["tools/output"], toolName)
 	os.MkdirAll(dir, 0755)
-	
+
 	filename := fmt.Sprintf("%s_%d.txt", sanitizeName(target), time.Now().Unix())
 	path := filepath.Join(dir, filename)
-	
+
 	return path, os.WriteFile(path, output, 0644)
 }
 
@@ -359,10 +361,10 @@ func (ws *Workspace) SaveEvidence(evidenceType, findingID string, data []byte, e
 	default:
 		dir = ws.Directories["evidence"]
 	}
-	
+
 	filename := fmt.Sprintf("%s_%d.%s", findingID, time.Now().Unix(), ext)
 	path := filepath.Join(dir, filename)
-	
+
 	return path, os.WriteFile(path, data, 0644)
 }
 

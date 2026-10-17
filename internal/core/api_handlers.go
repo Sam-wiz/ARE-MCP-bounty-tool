@@ -92,8 +92,8 @@ func (e *Engine) handleIngestResult(ctx context.Context, args map[string]interfa
 		}
 	}
 
-	return successResult(fmt.Sprintf("✅ Finding ingested:\n- ID: %s\n- Title: %s\n- Severity: %s\n- Saved to MongoDB: ✅\n\nUse validate_finding to verify, or get_findings to list all.",
-		finding.ID, finding.Title, finding.Severity)), nil
+	return successResult(fmt.Sprintf("✅ Finding ingested:\n- ID: %s\n- Title: %s\n- Severity: %s\n- Saved to MongoDB: %t\n\nUse validate_finding to verify, or get_findings to list all.",
+		finding.ID, finding.Title, finding.Severity, e.config.MongoDB != nil)), nil
 }
 
 // handleRunTool executes a specific plugin by name with provided arguments

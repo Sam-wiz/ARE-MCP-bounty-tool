@@ -36,6 +36,11 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 
 	// Set active program
 	e.mu.Lock()
+	if e.program != slug {
+		e.findings = make(map[string]*types.Finding)
+		e.session = nil
+		e.scope = types.Scope{}
+	}
 	e.program = slug
 	e.mu.Unlock()
 
@@ -112,7 +117,10 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 	mongoStatus := "⚠️ MongoDB not configured"
 	if e.config.MongoDB != nil {
 		// Check if program already exists
-		existing, _ := e.config.MongoDB.GetProgram(ctx, slug)
+		existing, err := e.config.MongoDB.GetProgram(ctx, slug)
+		if err != nil {
+			return errorResult("Cannot read persisted program"), nil
+		}
 		if existing != nil {
 			// Reactivate, but don't silently discard newly-passed fields —
 			// callers legitimately need to correct/extend scope on an
@@ -140,7 +148,9 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 			if program.Notes != "" {
 				existing.Notes = program.Notes
 			}
-			e.config.MongoDB.SaveProgram(ctx, existing)
+			if err := e.config.MongoDB.SaveProgram(ctx, existing); err != nil {
+				return errorResult("Cannot persist program update"), nil
+			}
 			if len(existing.Scope.InScope) > 0 || len(existing.Scope.OutOfScope) > 0 {
 				e.setActiveScope(existing.Scope)
 			}
@@ -148,7 +158,7 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 		}
 
 		if err := e.config.MongoDB.SaveProgram(ctx, program); err != nil {
-			mongoStatus = fmt.Sprintf("⚠️ MongoDB save failed: %v", err)
+			return errorResult("Cannot persist program"), nil
 		} else {
 			mongoStatus = "✅"
 		}

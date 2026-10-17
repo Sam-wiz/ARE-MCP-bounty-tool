@@ -44,7 +44,7 @@ func NewMongoClient(ctx context.Context, uri, dbName string) (*MongoClient, erro
 	if dbName == "" {
 		dbName = "hack_ai_v2"
 	}
-	clientOptions := options.Client().ApplyURI(uri).SetConnectTimeout(5 * time.Second)
+	clientOptions := options.Client().ApplyURI(uri).SetConnectTimeout(5 * time.Second).SetServerSelectionTimeout(5 * time.Second)
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
@@ -53,6 +53,7 @@ func NewMongoClient(ctx context.Context, uri, dbName string) (*MongoClient, erro
 
 	// Ping to verify connection
 	if err := client.Ping(ctx, nil); err != nil {
+		_ = client.Disconnect(context.Background())
 		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
 
@@ -66,6 +67,9 @@ func NewMongoClient(ctx context.Context, uri, dbName string) (*MongoClient, erro
 
 	return mc, nil
 }
+
+// Ping checks the live dependency, rather than just whether startup succeeded.
+func (m *MongoClient) Ping(ctx context.Context) error { return m.client.Ping(ctx, nil) }
 
 // Close closes the MongoDB connection
 func (m *MongoClient) Close(ctx context.Context) error {

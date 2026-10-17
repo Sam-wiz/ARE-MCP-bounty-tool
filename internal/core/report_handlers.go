@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -15,14 +16,41 @@ import (
 // ============================================================================
 
 func (e *Engine) handleGetFindings(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
+	findings, err := e.findingsForProgram(ctx, args)
+	if err != nil {
+		return errorResult("Cannot read persisted findings"), nil
+	}
+	if len(findings) == 0 {
+		return successResult("No findings match the criteria"), nil
+	}
+	data, _ := json.MarshalIndent(findings, "", "  ")
+	return successResult(string(data)), nil
+}
+
+// Read persisted state on every request so pod replacement does not hide findings.
+func (e *Engine) findingsForProgram(ctx context.Context, args map[string]interface{}) ([]*types.Finding, error) {
 	e.mu.RLock()
-	defer e.mu.RUnlock()
+	program := e.program
+	candidates := make([]*types.Finding, 0, len(e.findings))
+	for _, f := range e.findings {
+		if f.Program == program {
+			candidates = append(candidates, f)
+		}
+	}
+	e.mu.RUnlock()
+	if e.config.MongoDB != nil {
+		var err error
+		candidates, err = e.config.MongoDB.GetFindingsByProgram(ctx, program)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	stateFilter, _ := args["state"].(string)
 	severityFilter, _ := args["severity"].(string)
 
 	findings := make([]*types.Finding, 0)
-	for _, f := range e.findings {
+	for _, f := range candidates {
 		if stateFilter != "" && string(f.State) != stateFilter {
 			continue
 		}
@@ -32,22 +60,8 @@ func (e *Engine) handleGetFindings(ctx context.Context, args map[string]interfac
 		findings = append(findings, f)
 	}
 
-	// Also try MongoDB if we have it and in-memory is empty
-	if len(findings) == 0 && e.config.MongoDB != nil {
-		if stateFilter != "" {
-			dbFindings, err := e.config.MongoDB.GetFindingsByState(ctx, types.FindingState(stateFilter))
-			if err == nil {
-				findings = dbFindings
-			}
-		}
-	}
-
-	if len(findings) == 0 {
-		return successResult("No findings match the criteria"), nil
-	}
-
-	data, _ := json.MarshalIndent(findings, "", "  ")
-	return successResult(string(data)), nil
+	sort.Slice(findings, func(i, j int) bool { return findings[i].DetectedAt.Before(findings[j].DetectedAt) })
+	return findings, nil
 }
 
 func (e *Engine) handleGenerateReport(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
@@ -61,11 +75,11 @@ func (e *Engine) handleGenerateReport(ctx context.Context, args map[string]inter
 		platform = p
 	}
 
-	e.mu.RLock()
-	findings := make([]*types.Finding, 0, len(e.findings))
-	for _, f := range e.findings {
-		findings = append(findings, f)
+	findings, err := e.findingsForProgram(ctx, args)
+	if err != nil {
+		return errorResult("Cannot read persisted findings"), nil
 	}
+	e.mu.RLock()
 	session := e.session
 	e.mu.RUnlock()
 

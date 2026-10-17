@@ -26,12 +26,12 @@ type EngineConfig struct {
 
 // Engine is the core execution engine
 type Engine struct {
-	config   EngineConfig
-	session  *types.Session
-	program  string // active bounty program slug
-	findings map[string]*types.Finding
-	workers  map[string]*Worker
-	plugins  *PluginRegistry
+	config         EngineConfig
+	session        *types.Session
+	program        string // active bounty program slug
+	findings       map[string]*types.Finding
+	workers        map[string]*Worker
+	plugins        *PluginRegistry
 	reviewer       *reviewer.Reviewer
 	director       *director.Director
 	scope          types.Scope // authoritative active scope (set by set_program AND set_target)
@@ -172,10 +172,6 @@ func (e *Engine) ExecuteTool(ctx context.Context, name string, args map[string]i
 		return e.handleDiscoverConfig(ctx, args)
 	case "test_websocket":
 		return e.handleTestWebSocket(ctx, args)
-
-	// Wireless attack chain
-	case "wifi_attack":
-		return e.handleWifiAttack(ctx, args)
 
 	// Sandbox execution
 	case "execute_hunting_script":
