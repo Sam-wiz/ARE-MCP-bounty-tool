@@ -166,7 +166,7 @@ decisions       every tool call + captured model reasoning
 reviews         each panel round: per-model verdicts + aggregate + demands
 triage_outcomes real program verdicts + reward   → the scoreboard
 lessons         auto-generated from rejections   → reviewer grounding
-triage_threads  full researcher↔triager threads + embeddings (RAG)
+triage_threads  full researcher<->triager threads + embeddings (RAG)
 transcripts     archived agent sessions (RLHF corpus)
 programs · sessions · tool_runs · vector_statuses · script_executions · hypotheses
 ```

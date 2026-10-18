@@ -104,9 +104,9 @@ func (e *Engine) handleValidateScope(ctx context.Context, args map[string]interf
 	}
 
 	if inScope {
-		return successResult(fmt.Sprintf("✅ %s is IN SCOPE", target)), nil
+		return successResult(fmt.Sprintf("[OK] %s is IN SCOPE", target)), nil
 	}
-	return successResult(fmt.Sprintf("❌ %s is OUT OF SCOPE - Do not test!", target)), nil
+	return successResult(fmt.Sprintf("[ERROR] %s is OUT OF SCOPE - Do not test!", target)), nil
 }
 
 // validateURLScope checks if a URL is within the active session scope.
@@ -138,7 +138,7 @@ func (e *Engine) validateURLScope(rawURL string) error {
 		}
 	}
 
-	return fmt.Errorf("❌ %s is OUT OF SCOPE — request blocked. Use set_program/set_target to update scope.", host)
+	return fmt.Errorf("[ERROR] %s is OUT OF SCOPE — request blocked. Use set_program/set_target to update scope.", host)
 }
 
 // splitHostPath splits a raw URL, "host", or "host/path" string into a

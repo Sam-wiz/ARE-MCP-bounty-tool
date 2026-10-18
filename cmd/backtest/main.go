@@ -125,9 +125,9 @@ func main() {
 		verdict := string(rev.Verdict)
 		correct := scoreCorrect(s.State, rev.Verdict)
 		results = append(results, result{s.State, verdict, s.Title, correct})
-		mark := "✗"
+		mark := "[ERROR]"
 		if correct {
-			mark = "✓"
+			mark = "[OK]"
 		}
 		fmt.Printf("%s  real=%-9s panel=%-16s  %s\n", mark, s.State, verdict, short(s.Title))
 

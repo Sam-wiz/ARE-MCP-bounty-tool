@@ -28,10 +28,10 @@ func TestIntegrationPipeline(t *testing.T) {
 		} else {
 			config.MongoDB = mc
 			defer mc.Close(ctx)
-			t.Log("✅ MongoDB connected")
+			t.Log("[OK] MongoDB connected")
 		}
 	} else {
-		t.Log("ℹ️  MONGODB_URI not set, testing without persistence")
+		t.Log("[INFO]  MONGODB_URI not set, testing without persistence")
 	}
 
 	engine := NewEngine(config)
@@ -143,5 +143,5 @@ func TestIntegrationPipeline(t *testing.T) {
 		})
 	}
 
-	t.Log("✅ Integration pipeline complete")
+	t.Log("[OK] Integration pipeline complete")
 }

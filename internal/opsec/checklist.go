@@ -162,7 +162,7 @@ type ApprovalRequest struct {
 // FormatForDisplay formats the approval request for display
 func (ar *ApprovalRequest) FormatForDisplay() string {
 	result := fmt.Sprintf(`
-🔒 RISKY OPERATION APPROVAL REQUIRED
+ RISKY OPERATION APPROVAL REQUIRED
 
 Operation: %s
 Description: %s
@@ -176,7 +176,7 @@ CHECKLIST:
 	}
 	
 	result += `
-⚠️  This operation requires explicit approval.
+[WARNING]  This operation requires explicit approval.
 Please review the checklist and confirm to proceed.
 `
 	return result

@@ -241,12 +241,12 @@ func (m *Manager) getDefaultResponse(c *Consultation) *Response {
 
 // FormatForDisplay formats a consultation for human display
 func (c *Consultation) FormatForDisplay() string {
-	urgencyEmoji := "ℹ️"
+	urgencyEmoji := "[INFO]"
 	switch c.Urgency {
 	case UrgencyBlocking:
-		urgencyEmoji = "🛑"
+		urgencyEmoji = "[BLOCKED]"
 	case UrgencyCanContinue:
-		urgencyEmoji = "⚠️"
+		urgencyEmoji = "[WARNING]"
 	}
 	
 	result := fmt.Sprintf(`

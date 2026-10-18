@@ -95,7 +95,7 @@ func (e *Engine) handleTestInjection(ctx context.Context, args map[string]interf
 	}
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("🧪 Injection testing on %d URLs\nTypes: %v\n\n", len(urls), injectionTypes))
+	results.WriteString(fmt.Sprintf(" Injection testing on %d URLs\nTypes: %v\n\n", len(urls), injectionTypes))
 
 	for _, injType := range injectionTypes {
 		results.WriteString(fmt.Sprintf("=== Testing: %s ===\n", injType))
@@ -170,7 +170,7 @@ func (e *Engine) handleTestCloud(ctx context.Context, args map[string]interface{
 	}
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("☁️  Cloud testing: %s (provider: %s)\n\n", target, provider))
+	results.WriteString(fmt.Sprintf("  Cloud testing: %s (provider: %s)\n\n", target, provider))
 
 	// S3 bucket check
 	results.WriteString("=== S3 Bucket Check ===\n")

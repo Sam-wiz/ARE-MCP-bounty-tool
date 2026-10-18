@@ -59,12 +59,12 @@ clean:
 
 # Full CI: vet + test + build
 ci: vet test build
-	@echo "✅ All checks passed"
+	@echo "[OK] All checks passed"
 
 # Install CLI to /usr/local/bin (symlink)
 install: build-cli
 	@ln -sf $(PWD)/bin/hack-ai /usr/local/bin/hack-ai
-	@echo "✅ hack-ai installed to /usr/local/bin/hack-ai"
+	@echo "[OK] hack-ai installed to /usr/local/bin/hack-ai"
 
 
 # Local Advanced DevOps runtime. Does not commit or publish anything.

@@ -25,7 +25,7 @@ func (e *Engine) handleReconDiscover(ctx context.Context, args map[string]interf
 	}
 
 	var allResults strings.Builder
-	allResults.WriteString(fmt.Sprintf("🔍 Reconnaissance on %s (mode: %s)\n\n", domain, mode))
+	allResults.WriteString(fmt.Sprintf(" Reconnaissance on %s (mode: %s)\n\n", domain, mode))
 
 	// Phase 1: Subdomain Discovery
 	allResults.WriteString("=== Phase 1: Subdomain Discovery ===\n")

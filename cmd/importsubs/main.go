@@ -240,24 +240,24 @@ func (s submission) buildLesson(ctx context.Context, v1 *mongo.Database) (body, 
 	switch strings.ToUpper(s.State) {
 	case "ACCEPTED":
 		if s.Reward > 0 {
-			return fmt.Sprintf("✅ PAID $%.0f — %s/%s: %q. This is the pattern that pays: concrete, demonstrated impact with a working PoC. Do more like this.",
+			return fmt.Sprintf("[OK] PAID $%.0f — %s/%s: %q. This is the pattern that pays: concrete, demonstrated impact with a working PoC. Do more like this.",
 				s.Reward, s.Program, s.VulnType, s.Title), "paid-pattern"
 		}
-		return fmt.Sprintf("✅ ACCEPTED (no bounty, %s) — %s/%s: %q. Valid and in-scope but low payoff. Fine to file, don't over-invest.",
+		return fmt.Sprintf("[OK] ACCEPTED (no bounty, %s) — %s/%s: %q. Valid and in-scope but low payoff. Fine to file, don't over-invest.",
 			s.Severity, s.Program, s.VulnType, s.Title), "accepted-lowvalue"
 
 	case "DUPLICATE":
-		return fmt.Sprintf("♻️ DUPLICATE (valid but not first) — %s/%s: %q. The finding was CORRECT but already reported; this surface is saturated. To earn on %s, hit fresh scope or move faster — expect $0 on known classes here.",
+		return fmt.Sprintf(" DUPLICATE (valid but not first) — %s/%s: %q. The finding was CORRECT but already reported; this surface is saturated. To earn on %s, hit fresh scope or move faster — expect $0 on known classes here.",
 			s.Program, s.VulnType, s.Title, s.Program), "duplicate-saturated"
 
 	case "REJECTED":
 		gist := stripBoilerplate(s.RejectReason)
 		claim, found := correlateOverclaim(ctx, v1, s)
 		if found {
-			return fmt.Sprintf("❌ REJECTED — %s/%s: %q. Triager closed it: %q. The engine had marked this VULNERABLE claiming: %q. Marking a code path 'CONFIRMED/LIVE' in a test harness is NOT a triager-grade PoC. Before submitting this class, produce a reproducing exploit that demonstrates the security CONSEQUENCE on a real deployment — not just that the code executes.",
+			return fmt.Sprintf("[ERROR] REJECTED — %s/%s: %q. Triager closed it: %q. The engine had marked this VULNERABLE claiming: %q. Marking a code path 'CONFIRMED/LIVE' in a test harness is NOT a triager-grade PoC. Before submitting this class, produce a reproducing exploit that demonstrates the security CONSEQUENCE on a real deployment — not just that the code executes.",
 				s.Program, s.VulnType, s.Title, trunc(gist, 220), trunc(claim, 200)), "rejected-overclaim:" + s.VulnType
 		}
-		return fmt.Sprintf("❌ REJECTED — %s/%s: %q. Triager: %q. Don't resubmit this pattern without demonstrated, exploited security impact (a working PoC showing real consequence, not theory).",
+		return fmt.Sprintf("[ERROR] REJECTED — %s/%s: %q. Triager: %q. Don't resubmit this pattern without demonstrated, exploited security impact (a working PoC showing real consequence, not theory).",
 			s.Program, s.VulnType, s.Title, trunc(gist, 220)), "rejected:" + s.VulnType
 	}
 	return "", ""

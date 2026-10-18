@@ -50,7 +50,7 @@ log_pass() {
     if $JSON_OUTPUT; then return; fi
     local version_info=""
     if [ -n "${2:-}" ]; then version_info=" ${DIM}(${2})${NC}"; fi
-    echo -e "  ${GREEN}✅ PASS${NC}  ${1}${version_info}"
+    echo -e "  ${GREEN}[OK] PASS${NC}  ${1}${version_info}"
 }
 
 log_fail() {
@@ -58,13 +58,13 @@ log_fail() {
     if $JSON_OUTPUT; then return; fi
     local reason=""
     if [ -n "${2:-}" ]; then reason=" ${DIM}— ${2}${NC}"; fi
-    echo -e "  ${RED}❌ FAIL${NC}  ${1}${reason}"
+    echo -e "  ${RED}[ERROR] FAIL${NC}  ${1}${reason}"
 }
 
 log_skip() {
     SKIP=$((SKIP + 1))
     if $JSON_OUTPUT; then return; fi
-    echo -e "  ${YELLOW}⏭  SKIP${NC}  ${1} ${DIM}— ${2:-skipped}${NC}"
+    echo -e "  ${YELLOW}[SKIP]  SKIP${NC}  ${1} ${DIM}— ${2:-skipped}${NC}"
 }
 
 add_json() {
@@ -358,10 +358,10 @@ print_summary() {
     echo -e "${BOLD}  Health Check Summary${NC}"
     echo -e "${BOLD}${BLUE}══════════════════════════════════════════════════${NC}"
     echo ""
-    echo -e "  ${GREEN}✅ Passing:${NC}  $PASS"
-    echo -e "  ${RED}❌ Failing:${NC}  $FAIL"
-    echo -e "  ${YELLOW}⏭  Skipped:${NC} $SKIP"
-    echo -e "  ${CYAN}📊 Total:${NC}    $TOTAL  ($pct% operational)"
+    echo -e "  ${GREEN}[OK] Passing:${NC}  $PASS"
+    echo -e "  ${RED}[ERROR] Failing:${NC}  $FAIL"
+    echo -e "  ${YELLOW}[SKIP]  Skipped:${NC} $SKIP"
+    echo -e "  ${CYAN} Total:${NC}    $TOTAL  ($pct% operational)"
     echo ""
 
     # Health bar

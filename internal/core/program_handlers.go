@@ -114,7 +114,7 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 	}
 
 	// Persist to MongoDB
-	mongoStatus := "⚠️ MongoDB not configured"
+	mongoStatus := "[WARNING] MongoDB not configured"
 	if e.config.MongoDB != nil {
 		// Check if program already exists
 		existing, err := e.config.MongoDB.GetProgram(ctx, slug)
@@ -154,17 +154,17 @@ func (e *Engine) handleSetProgram(ctx context.Context, args map[string]interface
 			if len(existing.Scope.InScope) > 0 || len(existing.Scope.OutOfScope) > 0 {
 				e.setActiveScope(existing.Scope)
 			}
-			return successResult(fmt.Sprintf("🎯 Switched to existing program: %s\n- Platform: %s\n- Status: active\n- Workspace: %s\n- In Scope: %v\n- Out of Scope: %v\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, ws.Path, existing.Scope.InScope, existing.Scope.OutOfScope, slug)), nil
+			return successResult(fmt.Sprintf(" Switched to existing program: %s\n- Platform: %s\n- Status: active\n- Workspace: %s\n- In Scope: %v\n- Out of Scope: %v\n- All new findings/sessions will be tagged with program: %s", existing.Name, existing.Platform, ws.Path, existing.Scope.InScope, existing.Scope.OutOfScope, slug)), nil
 		}
 
 		if err := e.config.MongoDB.SaveProgram(ctx, program); err != nil {
 			return errorResult("Cannot persist program"), nil
 		} else {
-			mongoStatus = "✅"
+			mongoStatus = "[OK]"
 		}
 	}
 
-	return successResult(fmt.Sprintf(`🎯 Bounty program created and set:
+	return successResult(fmt.Sprintf(` Bounty program created and set:
 - Slug: %s
 - Name: %s
 - Platform: %s
@@ -191,14 +191,14 @@ func (e *Engine) handleListPrograms(ctx context.Context, args map[string]interfa
 	}
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("📋 Bounty Programs (%d total)\n\n", len(programs)))
+	result.WriteString(fmt.Sprintf(" Bounty Programs (%d total)\n\n", len(programs)))
 
 	for _, p := range programs {
 		active := ""
 		if p.Slug == e.GetProgram() {
 			active = " ← ACTIVE"
 		}
-		result.WriteString(fmt.Sprintf("🎯 %s (%s)%s\n", p.Name, p.Slug, active))
+		result.WriteString(fmt.Sprintf(" %s (%s)%s\n", p.Name, p.Slug, active))
 		result.WriteString(fmt.Sprintf("   Platform: %s | Status: %s\n", p.Platform, p.Status))
 		if p.URL != "" {
 			result.WriteString(fmt.Sprintf("   URL: %s\n", p.URL))
@@ -233,7 +233,7 @@ func (e *Engine) handleProgramStats(ctx context.Context, args map[string]interfa
 	data, _ := json.MarshalIndent(stats, "", "  ")
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("📊 Program Stats: %s\n\n", program))
+	result.WriteString(fmt.Sprintf(" Program Stats: %s\n\n", program))
 	result.WriteString(string(data))
 
 	// Also get recent findings

@@ -1031,13 +1031,13 @@ check_tools() {
         name=$(grep '^name:' "$yaml_file" | head -1 | sed 's/^name: *//')
         category=$(basename "$(dirname "$yaml_file")")
         if command -v "$name" &>/dev/null; then
-            echo -e "  ${GREEN}✅${NC} ${category}/${name} → $(which "$name")"
+            echo -e "  ${GREEN}[OK]${NC} ${category}/${name} → $(which "$name")"
             found=$((found + 1))
         elif [ -d "$TOOLS_DIR/$name" ]; then
-            echo -e "  ${GREEN}✅${NC} ${category}/${name} → $TOOLS_DIR/$name"
+            echo -e "  ${GREEN}[OK]${NC} ${category}/${name} → $TOOLS_DIR/$name"
             found=$((found + 1))
         else
-            echo -e "  ${RED}❌${NC} ${category}/${name}"
+            echo -e "  ${RED}[ERROR]${NC} ${category}/${name}"
             missing=$((missing + 1))
             missing_list="$missing_list $name"
         fi

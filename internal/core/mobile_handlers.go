@@ -21,7 +21,7 @@ func (e *Engine) handleTestMobile(ctx context.Context, args map[string]interface
 	apkPath, _ := args["apk_path"].(string)
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("📱 Mobile testing (mode: %s)\n\n", mode))
+	results.WriteString(fmt.Sprintf(" Mobile testing (mode: %s)\n\n", mode))
 
 	if mode == "static" || mode == "full" {
 		if apkPath == "" {
@@ -90,7 +90,7 @@ func (e *Engine) handleDownloadApp(ctx context.Context, args map[string]interfac
 	}
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("📦 App Download (platform: %s, source: %s)\n\n", platform, source))
+	results.WriteString(fmt.Sprintf(" App Download (platform: %s, source: %s)\n\n", platform, source))
 
 	// Ensure output directory exists
 	e.ExecuteRawCommand(ctx, fmt.Sprintf("mkdir -p %s", ShellEscape(outputDir)), "mkdir", 5)
@@ -107,15 +107,15 @@ func (e *Engine) handleDownloadApp(ctx context.Context, args map[string]interfac
 			}
 			cmd = fmt.Sprintf("apkeep -a %s -d google-play -e %s -t %s -o %s 2>&1",
 				ShellEscape(packageID), ShellEscape(email), ShellEscape(token), ShellEscape(outputDir))
-			results.WriteString("⚠️  Google Play source — use a burner account (ToS risk)\n\n")
+			results.WriteString("[WARNING]  Google Play source — use a burner account (ToS risk)\n\n")
 		case "f-droid":
 			cmd = fmt.Sprintf("apkeep -a %s -d f-droid -o %s 2>&1",
 				ShellEscape(packageID), ShellEscape(outputDir))
-			results.WriteString("🔓 F-Droid source — no auth needed, FOSS apps only\n\n")
+			results.WriteString(" F-Droid source — no auth needed, FOSS apps only\n\n")
 		default: // apkpure (default, no auth)
 			cmd = fmt.Sprintf("apkeep -a %s -o %s 2>&1",
 				ShellEscape(packageID), ShellEscape(outputDir))
-			results.WriteString("🔓 APKPure source — no auth needed\n\n")
+			results.WriteString(" APKPure source — no auth needed\n\n")
 		}
 
 		results.WriteString("=== Downloading APK ===\n")
@@ -130,7 +130,7 @@ func (e *Engine) handleDownloadApp(ctx context.Context, args map[string]interfac
 		results.WriteString(lsResult.Content[0].Text)
 
 	case "ios":
-		results.WriteString("🍎 iOS — requires Apple ID authentication\n\n")
+		results.WriteString(" iOS — requires Apple ID authentication\n\n")
 		results.WriteString("=== Downloading IPA ===\n")
 
 		cmd := fmt.Sprintf("ipatool download -b %s -o %s 2>&1",
@@ -149,7 +149,7 @@ func (e *Engine) handleDownloadApp(ctx context.Context, args map[string]interfac
 		return errorResult(fmt.Sprintf("Unknown platform: %s (use 'android' or 'ios')", platform)), nil
 	}
 
-	results.WriteString(fmt.Sprintf("\n\n💡 Next: use test_mobile with the downloaded file for static analysis"))
+	results.WriteString(fmt.Sprintf("\n\n Next: use test_mobile with the downloaded file for static analysis"))
 
 	return successResult(results.String()), nil
 }

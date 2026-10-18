@@ -34,7 +34,7 @@ func (e *Engine) handleTestWebSocket(ctx context.Context, args map[string]interf
 	}
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("🔌 WebSocket Testing: %s (protocol: %s)\n\n", wsURL, protocol))
+	results.WriteString(fmt.Sprintf(" WebSocket Testing: %s (protocol: %s)\n\n", wsURL, protocol))
 
 	// Test 1: Basic connectivity using websocat
 	results.WriteString("=== Test 1: Connectivity ===\n")
@@ -59,7 +59,7 @@ func (e *Engine) handleTestWebSocket(ctx context.Context, args map[string]interf
 		output := cswshResult.Content[0].Text
 		if !strings.Contains(output, "Rejected") && !strings.Contains(output, "403") &&
 			!strings.Contains(output, "failed") && !strings.Contains(output, "error") {
-			results.WriteString(fmt.Sprintf("  🔴 VULNERABLE: Origin '%s' accepted!\n", origin))
+			results.WriteString(fmt.Sprintf("  [ALERT] VULNERABLE: Origin '%s' accepted!\n", origin))
 
 			// Auto-ingest CSWSH finding
 			finding := &types.Finding{
@@ -82,9 +82,9 @@ func (e *Engine) handleTestWebSocket(ctx context.Context, args map[string]interf
 			if e.config.MongoDB != nil {
 				e.config.MongoDB.SaveFinding(ctx, finding)
 			}
-			results.WriteString(fmt.Sprintf("  📦 Finding ingested: %s\n", finding.ID))
+			results.WriteString(fmt.Sprintf("   Finding ingested: %s\n", finding.ID))
 		} else {
-			results.WriteString(fmt.Sprintf("  ✅ Origin '%s' correctly rejected\n", origin))
+			results.WriteString(fmt.Sprintf("  [OK] Origin '%s' correctly rejected\n", origin))
 		}
 	}
 
@@ -133,9 +133,9 @@ func (e *Engine) handleTestWebSocket(ctx context.Context, args map[string]interf
 			output := subResult.Content[0].Text
 			if !strings.Contains(output, "error") && !strings.Contains(output, "ERROR") &&
 				output != "" && !strings.Contains(output, "failed") {
-				results.WriteString(fmt.Sprintf("  🔴 Topic accessible: %s\n", topic))
+				results.WriteString(fmt.Sprintf("  [ALERT] Topic accessible: %s\n", topic))
 			} else {
-				results.WriteString(fmt.Sprintf("  ✅ Topic blocked: %s\n", topic))
+				results.WriteString(fmt.Sprintf("  [OK] Topic blocked: %s\n", topic))
 			}
 		}
 	}
@@ -157,9 +157,9 @@ func (e *Engine) handleTestWebSocket(ctx context.Context, args map[string]interf
 		output := injectResult.Content[0].Text
 		if strings.Contains(output, "alert") || strings.Contains(output, "49") ||
 			strings.Contains(output, "polluted") {
-			results.WriteString(fmt.Sprintf("  🔴 Payload reflected: %s\n", payload))
+			results.WriteString(fmt.Sprintf("  [ALERT] Payload reflected: %s\n", payload))
 		} else {
-			results.WriteString(fmt.Sprintf("  ✅ Payload: %s → filtered/ignored\n", truncateString(payload, 40)))
+			results.WriteString(fmt.Sprintf("  [OK] Payload: %s → filtered/ignored\n", truncateString(payload, 40)))
 		}
 	}
 
