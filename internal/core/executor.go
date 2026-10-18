@@ -145,14 +145,17 @@ func checkToolInstalled(plugin *types.PluginDefinition) error {
 func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefinition, args map[string]interface{}) (types.ToolResult, error) {
 	// 1. Check if tool is installed
 	if err := checkToolInstalled(plugin); err != nil {
-		return errorResult(fmt.Sprintf("🔧 Tool not installed: %v", err)), nil
+		return errorResult(fmt.Sprintf(" Tool not installed: %v", err)), nil
 	}
 
 	// 2. Build the command
 	cmdStr, err := buildCommand(plugin, args)
 	if err != nil {
-		return errorResult(fmt.Sprintf("❌ Failed to build command: %v", err)), nil
+		return errorResult(fmt.Sprintf("[ERROR] Failed to build command: %v", err)), nil
 	}
+
+	// Capture ownership before the external process starts.
+	program := e.GetProgram()
 
 	// 3. Execute the command
 	startedAt := time.Now()
@@ -160,12 +163,19 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 	duration := time.Since(startedAt)
 
 	// 4. Parse the output
-	parseResult, parseErr := ParseToolOutput(plugin, stdout, e.getSessionID())
+	var parseResult *ParseResult
+	var parseErr error
+	if execErr == nil {
+		parseResult, parseErr = ParseToolOutput(plugin, stdout, e.getSessionID())
+	}
 
 	// 5. Store findings in memory and MongoDB
 	var findingIDs []string
+	persisted := 0
+	persistenceFailed := false
 	if parseResult != nil {
 		for _, finding := range parseResult.Findings {
+			finding.Program = program
 			e.mu.Lock()
 			e.findings[finding.ID] = finding
 			e.mu.Unlock()
@@ -174,6 +184,9 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 			if e.config.MongoDB != nil {
 				if saveErr := e.config.MongoDB.SaveFinding(ctx, finding); saveErr != nil {
 					log.Printf("[EXECUTOR] Failed to save finding %s: %v", finding.ID, saveErr)
+					persistenceFailed = true
+				} else {
+					persisted++
 				}
 			}
 		}
@@ -202,20 +215,28 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 
 	// 7. Build summary for the LLM
 	var summary strings.Builder
-	summary.WriteString(fmt.Sprintf("✅ Executed: %s\n", plugin.Name))
-	summary.WriteString(fmt.Sprintf("📋 Command: %s\n", cmdStr))
-	summary.WriteString(fmt.Sprintf("⏱️  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
+	if execErr != nil {
+		summary.WriteString(fmt.Sprintf("[ERROR] Tool execution failed: %s\n", plugin.Name))
+	} else {
+		summary.WriteString(fmt.Sprintf("[OK] Executed: %s\n", plugin.Name))
+	}
+	summary.WriteString(fmt.Sprintf(" Command: %s\n", cmdStr))
+	summary.WriteString(fmt.Sprintf("  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
 
 	if execErr != nil {
-		summary.WriteString(fmt.Sprintf("⚠️  Error: %v\n", execErr))
+		summary.WriteString(fmt.Sprintf("[WARNING]  Error: %v\n", execErr))
 	}
 	if stderr != "" && len(stderr) < 500 {
-		summary.WriteString(fmt.Sprintf("📝 Stderr: %s\n", strings.TrimSpace(stderr)))
+		summary.WriteString(fmt.Sprintf(" Stderr: %s\n", strings.TrimSpace(stderr)))
 	}
 
 	if parseResult != nil && len(parseResult.Findings) > 0 {
-		summary.WriteString(fmt.Sprintf("🔍 Findings: %d items parsed (%s format)\n", parseResult.ItemCount, parseResult.ParseType))
-		summary.WriteString("📦 Saved to MongoDB: ✅\n\n")
+		summary.WriteString(fmt.Sprintf(" Findings: %d items parsed (%s format)\n", parseResult.ItemCount, parseResult.ParseType))
+		if e.config.MongoDB == nil {
+			summary.WriteString(" MongoDB not configured; results kept in memory.\n\n")
+		} else {
+			summary.WriteString(fmt.Sprintf(" Saved to MongoDB: %d/%d findings\n\n", persisted, len(parseResult.Findings)))
+		}
 
 		limit := 10
 		if len(parseResult.Findings) < limit {
@@ -240,7 +261,7 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 			summary.WriteString(fmt.Sprintf("... and %d more\n", len(parseResult.Findings)-limit))
 		}
 	} else {
-		summary.WriteString("📝 No structured findings parsed from output.\n")
+		summary.WriteString(" No structured findings parsed from output.\n")
 		raw := smartTruncate(stdout, 2000)
 		if raw != "" {
 			summary.WriteString("\n--- Raw Output ---\n")
@@ -249,10 +270,12 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 	}
 
 	if parseErr != nil {
-		summary.WriteString(fmt.Sprintf("\n⚠️  Parse warning: %v\n", parseErr))
+		summary.WriteString(fmt.Sprintf("\n[WARNING]  Parse warning: %v\n", parseErr))
 	}
 
-	return successResult(summary.String()), nil
+	result := successResult(summary.String())
+	result.IsError = execErr != nil || persistenceFailed
+	return result, nil
 }
 
 // ExecuteRawCommand runs an arbitrary command and logs it to MongoDB
@@ -281,15 +304,15 @@ func (e *Engine) ExecuteRawCommand(ctx context.Context, command string, toolName
 	}
 
 	var summary strings.Builder
-	summary.WriteString(fmt.Sprintf("✅ Executed: %s\n", toolName))
-	summary.WriteString(fmt.Sprintf("📋 Command: %s\n", command))
-	summary.WriteString(fmt.Sprintf("⏱️  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
+	summary.WriteString(fmt.Sprintf("[OK] Executed: %s\n", toolName))
+	summary.WriteString(fmt.Sprintf(" Command: %s\n", command))
+	summary.WriteString(fmt.Sprintf("  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
 
 	if execErr != nil {
-		summary.WriteString(fmt.Sprintf("⚠️  Error: %v\n", execErr))
+		summary.WriteString(fmt.Sprintf("[WARNING]  Error: %v\n", execErr))
 	}
 	if stderr != "" && len(stderr) < 1000 {
-		summary.WriteString(fmt.Sprintf("📝 Stderr: %s\n", strings.TrimSpace(stderr)))
+		summary.WriteString(fmt.Sprintf(" Stderr: %s\n", strings.TrimSpace(stderr)))
 	}
 
 	raw := smartTruncate(stdout, 5000)
@@ -348,7 +371,7 @@ func (e *Engine) ExecuteHuntingScript(
 	conn, err := net.DialTimeout("tcp", proxyAddr, 2*time.Second)
 	if err != nil {
 		return errorResult(fmt.Sprintf(
-			"⛔ Proxy offline at %s. Start mitmproxy:\n  mitmproxy -s scripts/scope_enforcer.py --listen-port %s\n\nError: %v",
+			"[BLOCKED] Proxy offline at %s. Start mitmproxy:\n  mitmproxy -s scripts/scope_enforcer.py --listen-port %s\n\nError: %v",
 			proxyAddr, proxyAddr[strings.LastIndex(proxyAddr, ":")+1:], err,
 		)), nil
 	}
@@ -369,7 +392,7 @@ func (e *Engine) ExecuteHuntingScript(
 	case "bash":
 		ext = "sh"
 	default:
-		return errorResult(fmt.Sprintf("❌ Unsupported runtime: %s (must be 'python' or 'bash')", runtime)), nil
+		return errorResult(fmt.Sprintf("[ERROR] Unsupported runtime: %s (must be 'python' or 'bash')", runtime)), nil
 	}
 
 	testsDir := ws.GetTestsPath()
@@ -385,13 +408,13 @@ func (e *Engine) ExecuteHuntingScript(
 		log.Printf("[SANDBOX] Installing dependencies: %v", dependencies)
 		wsMgr := workspace.NewManager("")
 		if depErr := wsMgr.InstallDependencies(ws.Path, dependencies); depErr != nil {
-			return errorResult(fmt.Sprintf("❌ Failed to install dependencies %v: %v", dependencies, depErr)), nil
+			return errorResult(fmt.Sprintf("[ERROR] Failed to install dependencies %v: %v", dependencies, depErr)), nil
 		}
 	}
 
 	// ── Step 3: Save script to disk ─────────────────────────────────────
 	if err := os.WriteFile(scriptFile, []byte(code), 0644); err != nil {
-		return errorResult(fmt.Sprintf("❌ Failed to save script: %v", err)), nil
+		return errorResult(fmt.Sprintf("[ERROR] Failed to save script: %v", err)), nil
 	}
 	log.Printf("[SANDBOX] Script saved: %s", scriptFile)
 
@@ -403,7 +426,7 @@ func (e *Engine) ExecuteHuntingScript(
 		// Verify venv exists
 		if _, err := os.Stat(interpreter); os.IsNotExist(err) {
 			return errorResult(fmt.Sprintf(
-				"❌ Venv Python not found at %s. Run set_program to create workspace first.", interpreter,
+				"[ERROR] Venv Python not found at %s. Run set_program to create workspace first.", interpreter,
 			)), nil
 		}
 	case "bash":
@@ -446,7 +469,7 @@ func (e *Engine) ExecuteHuntingScript(
 	// ── Step 7: Open log file and wire stdout/stderr ────────────────────
 	logFd, err := os.Create(logFile)
 	if err != nil {
-		return errorResult(fmt.Sprintf("❌ Failed to create log file: %v", err)), nil
+		return errorResult(fmt.Sprintf("[ERROR] Failed to create log file: %v", err)), nil
 	}
 	defer logFd.Close()
 
@@ -529,27 +552,27 @@ func (e *Engine) ExecuteHuntingScript(
 
 	// ── Step 10: Build LLM response ─────────────────────────────────────
 	fullOutput := outputBuf.String()
-	
+
 	// FIX: Use smartTruncate instead of tailString to keep headers/status
 	snippet := smartTruncate(fullOutput, 2000)
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("🔒 Sandboxed Execution Complete\n"))
-	result.WriteString(fmt.Sprintf("📄 Script:   %s\n", scriptFile))
-	result.WriteString(fmt.Sprintf("📋 Log:      %s\n", logFile))
-	result.WriteString(fmt.Sprintf("⏱️  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
-	result.WriteString(fmt.Sprintf("🌐 Proxy:    %s (scope enforced)\n", proxyURL))
+	result.WriteString(fmt.Sprintf(" Sandboxed Execution Complete\n"))
+	result.WriteString(fmt.Sprintf(" Script:   %s\n", scriptFile))
+	result.WriteString(fmt.Sprintf(" Log:      %s\n", logFile))
+	result.WriteString(fmt.Sprintf("  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
+	result.WriteString(fmt.Sprintf(" Proxy:    %s (scope enforced)\n", proxyURL))
 
 	if execErr != nil {
-		result.WriteString(fmt.Sprintf("⚠️  Error: %v\n", execErr))
+		result.WriteString(fmt.Sprintf("[WARNING]  Error: %v\n", execErr))
 	}
 	if len(dependencies) > 0 {
-		result.WriteString(fmt.Sprintf("📦 Deps installed: %v\n", dependencies))
+		result.WriteString(fmt.Sprintf(" Deps installed: %v\n", dependencies))
 	}
 
 	result.WriteString("\n--- Output (Smart Truncated: First 1000 + Last 1000 chars) ---\n")
 	result.WriteString(snippet)
-	result.WriteString("\n\n💾 Full output preserved at: " + logFile)
+	result.WriteString("\n\n Full output preserved at: " + logFile)
 
 	return successResult(result.String()), nil
 }

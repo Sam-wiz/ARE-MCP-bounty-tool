@@ -5,29 +5,33 @@ import (
 	"os"
 	"testing"
 
+	appconfig "github.com/samrudh/hack-ai-v2/internal/config"
 	"github.com/samrudh/hack-ai-v2/internal/storage"
 )
 
 // TestIntegrationPipeline tests the full: set_program → set_target → ingest_result → get_findings flow
 func TestIntegrationPipeline(t *testing.T) {
+	t.Setenv("WORKSPACE_SKIP_VENV", "1")
 	ctx := context.Background()
 
 	// Build engine without MongoDB (unit test mode)
-	config := EngineConfig{}
+	cfg := appconfig.LoadOrDefault("")
+	cfg.Workspace.BaseDir = t.TempDir()
+	config := EngineConfig{Config: cfg}
 
 	// If MONGODB_URI is set, test with real MongoDB
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI != "" {
-		mc, err := storage.NewMongoClient(ctx, mongoURI)
+		mc, err := storage.NewMongoClient(ctx, mongoURI, "hack_ai_test")
 		if err != nil {
-			t.Logf("MongoDB not available, running without persistence: %v", err)
+			t.Fatalf("MONGODB_URI is set but persistence is unavailable: %v", err)
 		} else {
 			config.MongoDB = mc
 			defer mc.Close(ctx)
-			t.Log("✅ MongoDB connected")
+			t.Log("[OK] MongoDB connected")
 		}
 	} else {
-		t.Log("ℹ️  MONGODB_URI not set, testing without persistence")
+		t.Log("[INFO]  MONGODB_URI not set, testing without persistence")
 	}
 
 	engine := NewEngine(config)
@@ -35,10 +39,10 @@ func TestIntegrationPipeline(t *testing.T) {
 	// Step 1: Set program
 	t.Run("SetProgram", func(t *testing.T) {
 		result, err := engine.ExecuteTool(ctx, "set_program", map[string]interface{}{
-			"slug":     "test-program",
-			"name":     "Test Bug Bounty Program",
-			"platform": "hackerone",
-			"url":      "https://hackerone.com/test",
+			"slug":       "test-program",
+			"name":       "Test Bug Bounty Program",
+			"platform":   "hackerone",
+			"url":        "https://hackerone.com/test",
 			"payout_min": float64(100),
 			"payout_max": float64(10000),
 		})
@@ -139,5 +143,5 @@ func TestIntegrationPipeline(t *testing.T) {
 		})
 	}
 
-	t.Log("✅ Integration pipeline complete")
+	t.Log("[OK] Integration pipeline complete")
 }

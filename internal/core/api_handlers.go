@@ -92,8 +92,8 @@ func (e *Engine) handleIngestResult(ctx context.Context, args map[string]interfa
 		}
 	}
 
-	return successResult(fmt.Sprintf("✅ Finding ingested:\n- ID: %s\n- Title: %s\n- Severity: %s\n- Saved to MongoDB: ✅\n\nUse validate_finding to verify, or get_findings to list all.",
-		finding.ID, finding.Title, finding.Severity)), nil
+	return successResult(fmt.Sprintf("[OK] Finding ingested:\n- ID: %s\n- Title: %s\n- Severity: %s\n- Saved to MongoDB: %t\n\nUse validate_finding to verify, or get_findings to list all.",
+		finding.ID, finding.Title, finding.Severity, e.config.MongoDB != nil)), nil
 }
 
 // handleRunTool executes a specific plugin by name with provided arguments
@@ -165,7 +165,7 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 	}
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("🔐 API Test: %s %s\n\n", method, url1))
+	results.WriteString(fmt.Sprintf(" API Test: %s %s\n\n", method, url1))
 
 	// Request 1: Main request (egress through the configured proxy)
 	cmd1 := fmt.Sprintf("curl -s%s -w '\\n---HTTP_CODE:%%{http_code}---' -X %s%s%s %s 2>/dev/null",
@@ -185,9 +185,9 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 		// Simple diff
 		results.WriteString("\n\n=== Differential Analysis ===\n")
 		if result1.Content[0].Text == result2.Content[0].Text {
-			results.WriteString("⚠️  Responses are IDENTICAL — may indicate template/generic response\n")
+			results.WriteString("[WARNING]  Responses are IDENTICAL — may indicate template/generic response\n")
 		} else {
-			results.WriteString("🔴 Responses DIFFER — potential IDOR confirmed!\n")
+			results.WriteString("[ALERT] Responses DIFFER — potential IDOR confirmed!\n")
 		}
 	}
 
@@ -202,7 +202,7 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 		// Check if we can access without auth
 		noAuthOutput := resultNoAuth.Content[0].Text
 		if strings.Contains(noAuthOutput, "HTTP_CODE:200") || strings.Contains(noAuthOutput, "HTTP_CODE:201") {
-			results.WriteString("\n🔴 CRITICAL: Endpoint accessible WITHOUT authentication!\n")
+			results.WriteString("\n[ALERT] CRITICAL: Endpoint accessible WITHOUT authentication!\n")
 
 			// Auto-ingest as finding
 			finding := &types.Finding{
@@ -225,7 +225,7 @@ func (e *Engine) handleAPITest(ctx context.Context, args map[string]interface{})
 			if e.config.MongoDB != nil {
 				e.config.MongoDB.SaveFinding(ctx, finding)
 			}
-			results.WriteString(fmt.Sprintf("📦 Auto-ingested as finding %s\n", finding.ID))
+			results.WriteString(fmt.Sprintf(" Auto-ingested as finding %s\n", finding.ID))
 		}
 	}
 
@@ -275,7 +275,7 @@ func (e *Engine) handleHTTPRequest(ctx context.Context, args map[string]interfac
 	body.Write(buf[:n])
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("📡 %s %s → %d %s\n\n", method, url, resp.StatusCode, resp.Status))
+	result.WriteString(fmt.Sprintf(" %s %s → %d %s\n\n", method, url, resp.StatusCode, resp.Status))
 	result.WriteString("--- Response Headers ---\n")
 	for k, v := range resp.Header {
 		result.WriteString(fmt.Sprintf("%s: %s\n", k, strings.Join(v, ", ")))

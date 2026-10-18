@@ -32,10 +32,10 @@ banner() {
 
 check_tool() {
     if command -v "$1" &>/dev/null; then
-        echo -e "  ${GREEN}✅${NC} $1 ${DIM}$(which "$1")${NC}"
+        echo -e "  ${GREEN}[OK]${NC} $1 ${DIM}$(which "$1")${NC}"
         return 0
     else
-        echo -e "  ${RED}❌${NC} $1 ${DIM}— not installed${NC}"
+        echo -e "  ${RED}[ERROR]${NC} $1 ${DIM}— not installed${NC}"
         return 1
     fi
 }
@@ -175,10 +175,10 @@ connect_vpn() {
     echo -e "${CYAN}Connecting to ProtonVPN ($country)...${NC}"
 
     if protonvpn-cli connect --cc "$country"; then
-        echo -e "\n${GREEN}✅ Connected to ProtonVPN ($country)${NC}"
+        echo -e "\n${GREEN}[OK] Connected to ProtonVPN ($country)${NC}"
         echo -e "  New IP: $(get_public_ip)"
     else
-        echo -e "\n${RED}❌ Failed to connect. Make sure you've logged in:${NC}"
+        echo -e "\n${RED}[ERROR] Failed to connect. Make sure you've logged in:${NC}"
         echo "  protonvpn-cli login <username>"
     fi
 }
@@ -195,7 +195,7 @@ disconnect_vpn() {
 
     echo -e "${CYAN}Disconnecting from ProtonVPN...${NC}"
     if protonvpn-cli disconnect 2>/dev/null; then
-        echo -e "${GREEN}✅ Disconnected${NC}"
+        echo -e "${GREEN}[OK] Disconnected${NC}"
         echo -e "  Current IP: $(get_public_ip)"
     else
         echo -e "${YELLOW}Not connected or already disconnected.${NC}"
@@ -227,7 +227,7 @@ spoof_mac() {
         sudo spoof-mac randomize "$iface"
         local new_mac
         new_mac=$(get_mac_address "$iface")
-        echo -e "  ${GREEN}✅ New MAC ($iface):${NC} $new_mac"
+        echo -e "  ${GREEN}[OK] New MAC ($iface):${NC} $new_mac"
     elif command -v macchanger &>/dev/null; then
         echo -e "${CYAN}Randomizing MAC via macchanger...${NC}"
         sudo ip link set "$iface" down 2>/dev/null
@@ -235,7 +235,7 @@ spoof_mac() {
         sudo ip link set "$iface" up 2>/dev/null
         local new_mac
         new_mac=$(get_mac_address "$iface")
-        echo -e "  ${GREEN}✅ New MAC ($iface):${NC} $new_mac"
+        echo -e "  ${GREEN}[OK] New MAC ($iface):${NC} $new_mac"
     else
         echo -e "${RED}No MAC spoofing tool found. Install with: bash scripts/install_tools.sh --opsec${NC}"
         exit 1
@@ -255,12 +255,12 @@ restore_mac() {
     if command -v spoof-mac &>/dev/null; then
         echo -e "${CYAN}Restoring original MAC...${NC}"
         sudo spoof-mac reset "$iface"
-        echo -e "  ${GREEN}✅ MAC restored ($iface):${NC} $(get_mac_address "$iface")"
+        echo -e "  ${GREEN}[OK] MAC restored ($iface):${NC} $(get_mac_address "$iface")"
     elif command -v macchanger &>/dev/null; then
         sudo ip link set "$iface" down 2>/dev/null
         sudo macchanger -p "$iface"
         sudo ip link set "$iface" up 2>/dev/null
-        echo -e "  ${GREEN}✅ MAC restored ($iface):${NC} $(get_mac_address "$iface")"
+        echo -e "  ${GREEN}[OK] MAC restored ($iface):${NC} $(get_mac_address "$iface")"
     else
         echo -e "${RED}No MAC spoofing tool found.${NC}"
     fi
@@ -289,13 +289,13 @@ start_tor() {
         if curl -s --socks5-hostname 127.0.0.1:9050 --max-time 3 https://check.torproject.org/api/ip 2>/dev/null | grep -q "true"; then
             local tor_ip
             tor_ip=$(curl -s --socks5-hostname 127.0.0.1:9050 --max-time 5 https://api.ipify.org 2>/dev/null || echo "?")
-            echo -e "\n  ${GREEN}✅ Tor is running (exit IP: $tor_ip)${NC}"
+            echo -e "\n  ${GREEN}[OK] Tor is running (exit IP: $tor_ip)${NC}"
             return 0
         fi
         echo -n "."
         sleep 2
     done
-    echo -e "\n  ${RED}❌ Tor failed to start within 30 seconds${NC}"
+    echo -e "\n  ${RED}[ERROR] Tor failed to start within 30 seconds${NC}"
     return 1
 }
 
@@ -347,7 +347,7 @@ teardown() {
     if command -v protonvpn-cli &>/dev/null; then
         echo -e "${CYAN}Disconnecting ProtonVPN...${NC}"
         protonvpn-cli disconnect 2>/dev/null || true
-        echo -e "  ${GREEN}✅${NC} VPN disconnected"
+        echo -e "  ${GREEN}[OK]${NC} VPN disconnected"
     fi
 
     # Stop Tor
@@ -358,7 +358,7 @@ teardown() {
         else
             sudo systemctl stop tor 2>/dev/null || pkill tor 2>/dev/null || true
         fi
-        echo -e "  ${GREEN}✅${NC} Tor stopped"
+        echo -e "  ${GREEN}[OK]${NC} Tor stopped"
     fi
 
     # Restore MAC
@@ -367,7 +367,7 @@ teardown() {
     echo ""
 
     echo -e "  Current IP: $(get_public_ip)"
-    echo -e "\n${GREEN}✅ OPSEC teardown complete${NC}"
+    echo -e "\n${GREEN}[OK] OPSEC teardown complete${NC}"
 }
 
 # ============================================================================

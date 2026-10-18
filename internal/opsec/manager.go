@@ -374,16 +374,16 @@ type CheckResult struct {
 func (v *VerificationResult) String() string {
 	result := "OPSEC Verification:\n"
 	for name, check := range v.Checks {
-		status := "✅"
+		status := "[OK]"
 		if !check.Passed {
-			status = "❌"
+			status = "[ERROR]"
 		}
 		result += fmt.Sprintf("  %s %s: %s\n", status, name, check.Details)
 	}
 	if v.AllPassed {
-		result += "\n✅ ALL CHECKS PASSED - Ready for testing"
+		result += "\n[OK] ALL CHECKS PASSED - Ready for testing"
 	} else {
-		result += "\n❌ SOME CHECKS FAILED - Review before proceeding"
+		result += "\n[ERROR] SOME CHECKS FAILED - Review before proceeding"
 	}
 	return result
 }

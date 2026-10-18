@@ -130,7 +130,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 	}
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("🔍 Config/JS Discovery: %s (mode: %s)\n\n", baseURL, mode))
+	result.WriteString(fmt.Sprintf(" Config/JS Discovery: %s (mode: %s)\n\n", baseURL, mode))
 
 	discovery := &DiscoveryResult{
 		ConfigValues: make(map[string]string),
@@ -164,17 +164,17 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 
 				// If it's a config file but we got HTML, it's likely a soft 404
 				if isHTML && !strings.HasSuffix(path, ".html") && !strings.HasSuffix(path, ".php") && !strings.HasSuffix(path, "/") {
-					result.WriteString(fmt.Sprintf("  ⚠️  Soft 404 / HTML Mismatch: %s (ignoring)\n", path))
+					result.WriteString(fmt.Sprintf("  [WARNING]  Soft 404 / HTML Mismatch: %s (ignoring)\n", path))
 					continue
 				}
 
-				result.WriteString(fmt.Sprintf("  ✅ FOUND: %s (%d bytes)\n", path, len(body)))
+				result.WriteString(fmt.Sprintf("  [OK] FOUND: %s (%d bytes)\n", path, len(body)))
 
 				// Check for secrets in the file
 				secrets := scanForSecrets(bodyStr, path)
 				for _, s := range secrets {
 					discovery.Secrets = append(discovery.Secrets, s)
-					result.WriteString(fmt.Sprintf("    🔑 SECRET [%s]: %s = %s\n",
+					result.WriteString(fmt.Sprintf("     SECRET [%s]: %s = %s\n",
 						s.Severity, s.Type, truncateString(s.Value, 40)))
 				}
 
@@ -219,7 +219,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 				re := regexp.MustCompile(`//# sourceMappingURL=(.+)`)
 				if m := re.FindStringSubmatch(jsContent); len(m) > 1 {
 					discovery.SourceMapURLs = append(discovery.SourceMapURLs, m[1])
-					result.WriteString(fmt.Sprintf("  📍 Source map: %s → %s\n", jsURL, m[1]))
+					result.WriteString(fmt.Sprintf("   Source map: %s → %s\n", jsURL, m[1]))
 				}
 			}
 
@@ -227,7 +227,7 @@ func (e *Engine) handleDiscoverConfig(ctx context.Context, args map[string]inter
 			secrets := scanForSecrets(jsContent, jsURL)
 			for _, s := range secrets {
 				discovery.Secrets = append(discovery.Secrets, s)
-				result.WriteString(fmt.Sprintf("  🔑 SECRET in %s: [%s] %s\n",
+				result.WriteString(fmt.Sprintf("   SECRET in %s: [%s] %s\n",
 					jsURL, s.Type, truncateString(s.Value, 50)))
 			}
 

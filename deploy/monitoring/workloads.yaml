@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: prometheus}
+  template:
+    metadata:
+      labels: {app: prometheus}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.2.1
+          args: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=2h]
+
+          ports:
+            - {name: http, containerPort: 9090}
+          readinessProbe:
+            tcpSocket: {port: http}
+          livenessProbe:
+            tcpSocket: {port: http}
+            initialDelaySeconds: 30
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus, readOnly: true}
+            - {name: data, mountPath: /prometheus}
+      volumes:
+        - name: config
+          configMap: {name: prometheus-config}
+        - name: data
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+spec:
+  selector: {app: prometheus}
+  ports:
+    - {name: http, port: 9090, targetPort: 9090}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: grafana}
+  template:
+    metadata:
+      labels: {app: grafana}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472
+        runAsGroup: 472
+        fsGroup: 472
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.6.0
+          args: []
+          envFrom:
+            - secretRef: {name: grafana-secrets}
+          env:
+            - {name: GF_USERS_ALLOW_SIGN_UP, value: 'false'}
+            - {name: GF_AUTH_ANONYMOUS_ENABLED, value: 'false'}
+            - {name: GF_ANALYTICS_REPORTING_ENABLED, value: 'false'}
+          ports:
+            - {name: http, containerPort: 3000}
+          readinessProbe:
+            tcpSocket: {port: http}
+          livenessProbe:
+            tcpSocket: {port: http}
+            initialDelaySeconds: 30
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/grafana}
+            - {name: sources, mountPath: /etc/grafana/provisioning/datasources, readOnly: true}
+            - {name: providers, mountPath: /etc/grafana/provisioning/dashboards, readOnly: true}
+            - {name: dashboard, mountPath: /var/lib/grafana/dashboards, readOnly: true}
+      volumes:
+        - name: data
+          emptyDir: {sizeLimit: 256Mi}
+        - name: sources
+          configMap: {name: grafana-datasources}
+        - name: providers
+          configMap: {name: grafana-providers}
+        - name: dashboard
+          configMap: {name: grafana-dashboard}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  selector: {app: grafana}
+  ports:
+    - {name: http, port: 3000, targetPort: 3000}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: jaeger}
+  template:
+    metadata:
+      labels: {app: jaeger}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.65.0
+          args: []
+          env:
+            - {name: COLLECTOR_OTLP_ENABLED, value: 'true'}
+            - {name: MEMORY_MAX_TRACES, value: '10000'}
+          ports:
+            - {name: http, containerPort: 16686}
+          readinessProbe:
+            tcpSocket: {port: http}
+          livenessProbe:
+            tcpSocket: {port: http}
+            initialDelaySeconds: 30
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+spec:
+  selector: {app: jaeger}
+  ports:
+    - {name: http, port: 16686, targetPort: 16686}
+    - {name: otlp, port: 4318, targetPort: 4318}

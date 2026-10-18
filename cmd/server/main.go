@@ -1,119 +1,168 @@
-// Package main is the entry point for the hack-ai-v2 MCP server
+// Package main starts either the original stdio MCP server or the local cloud
+// workflow gateway. HTTP mode requires both databases and authentication.
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/samrudh/hack-ai-v2/internal/config"
 	"github.com/samrudh/hack-ai-v2/internal/core"
 	"github.com/samrudh/hack-ai-v2/internal/mcp"
 	"github.com/samrudh/hack-ai-v2/internal/storage"
+	"github.com/samrudh/hack-ai-v2/internal/telemetry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
-const (
-	Version = "2.0.0"
-	Name    = "hack-ai-v2"
-)
+var Version = "2.1.0-dev"
+var Revision = "working-tree"
+
+const Name = "hack-ai-v2"
 
 func main() {
-	// Setup logging to stderr (stdout is for MCP communication)
-	log.SetOutput(os.Stderr)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	slog.SetDefault(logger)
+	if err := run(logger); err != nil {
+		logger.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
+}
 
-	// Print banner
-	printBanner()
-
-	// Load .env (gitignored) before anything reads the environment.
+func run(logger *slog.Logger) error {
 	config.LoadDotEnv()
-
-	// Load configuration
+	mode := os.Getenv("SERVER_TRANSPORT")
+	if mode == "" {
+		mode = "stdio"
+	}
+	if mode != "stdio" && mode != "http" {
+		return errors.New("SERVER_TRANSPORT must be stdio or http")
+	}
+	if mode == "http" && len(os.Getenv("API_TOKEN")) < 32 {
+		return errors.New("HTTP mode requires API_TOKEN with at least 32 characters")
+	}
 	cfg := config.LoadOrDefault(getConfigPath())
-	log.Printf("Config loaded (Redis: %s)", cfg.Redis.Addr) // never log the Mongo URI (contains creds)
-
-	// Allow env vars to override config file values
-	if envMongo := os.Getenv("MONGODB_URI"); envMongo != "" {
-		cfg.MongoDB.URI = envMongo
+	if v := os.Getenv("MONGODB_URI"); v != "" {
+		cfg.MongoDB.URI = v
 	}
-	if envDB := os.Getenv("MONGODB_DATABASE"); envDB != "" {
-		cfg.MongoDB.Database = envDB
+	if v := os.Getenv("MONGODB_DATABASE"); v != "" {
+		cfg.MongoDB.Database = v
 	}
-	if envRedis := os.Getenv("REDIS_ADDR"); envRedis != "" {
-		cfg.Redis.Addr = envRedis
+	if v := os.Getenv("REDIS_ADDR"); v != "" {
+		cfg.Redis.Addr = v
 	}
-
-	// Initialize context with cancellation
-	ctx, cancel := context.WithCancel(context.Background())
+	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
+		cfg.Redis.Password = v
+	}
+	if v := os.Getenv("REDIS_DB"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return errors.New("invalid REDIS_DB")
+		}
+		cfg.Redis.DB = n
+	}
+	if v := os.Getenv("WORKSPACE_DIR"); v != "" {
+		cfg.Workspace.BaseDir = v
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
-
-	// Handle signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		log.Println("Shutdown signal received")
-		cancel()
+	shutdownTracing, err := telemetry.Setup(ctx, Version)
+	if err != nil {
+		return fmt.Errorf("initialize tracing: %w", err)
+	}
+	defer func() {
+		closeCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = shutdownTracing(closeCtx)
 	}()
-
-	// Initialize MongoDB connection
 	mongoClient, err := storage.NewMongoClient(ctx, cfg.MongoDB.URI, cfg.MongoDB.Database)
 	if err != nil {
-		log.Printf("Warning: MongoDB not available: %v", err)
-		log.Println("Continuing without decision logging...")
-		mongoClient = nil
+		if mode == "http" {
+			return errors.New("MongoDB unavailable; check credentials and connectivity")
+		}
+		logger.Warn("MongoDB unavailable; stdio persistence disabled")
 	} else {
-		defer mongoClient.Close(ctx)
-		log.Println("MongoDB connected successfully")
+		defer func() {
+			closeCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+			defer c()
+			_ = mongoClient.Close(closeCtx)
+		}()
 	}
-
-	// Initialize Redis connection
-	redisClient, err := core.NewRedisClient(cfg.Redis.Addr)
+	redisClient, err := core.NewRedisClientWithOptions(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
-		log.Printf("Warning: Redis not available: %v", err)
-		log.Println("Continuing without async task queue...")
-		redisClient = nil
+		if mode == "http" {
+			return errors.New("Redis unavailable; check credentials and connectivity")
+		}
+		logger.Warn("Redis unavailable; stdio queue disabled")
 	} else {
 		defer redisClient.Close()
-		log.Println("Redis connected successfully")
 	}
-
-	// Initialize core engine
-	engine := core.NewEngine(core.EngineConfig{
-		MongoDB: mongoClient,
-		Redis:   redisClient,
-		Config:  cfg,
-	})
-
-	// Initialize MCP server
-	server := mcp.NewServer(mcp.ServerConfig{
-		Name:    Name,
-		Version: Version,
-		Engine:  engine,
-	})
-
-	// Run MCP server over stdio
-	log.Println("Starting MCP server on stdio...")
-	if err := server.ServeStdio(ctx, os.Stdin, os.Stdout); err != nil {
-		log.Fatalf("Server error: %v", err)
+	engine := core.NewEngine(core.EngineConfig{MongoDB: mongoClient, Redis: redisClient, Config: cfg})
+	server := mcp.NewServer(mcp.ServerConfig{Name: Name, Version: Version, Engine: engine})
+	logger.Info("server starting", "transport", mode, "version", Version, "revision", Revision)
+	if mode == "stdio" {
+		// Close the OS pipe on signal so a blocked ReadBytes can return.
+		go func() { <-ctx.Done(); _ = os.Stdin.Close() }()
+		err = server.ServeStdio(ctx, os.Stdin, os.Stdout)
+		if ctx.Err() != nil {
+			return nil
+		}
+		return err
 	}
-
-	log.Println("Server shutdown complete")
+	handler, err := server.HTTPHandler(mcp.HTTPConfig{Token: os.Getenv("API_TOKEN"), Version: Version, Revision: Revision, Logger: logger, Ready: func(ctx context.Context) error {
+		for _, dep := range []struct {
+			name string
+			ping func(context.Context) error
+		}{{"mongodb", mongoClient.Ping}, {"redis", redisClient.Ping}} {
+			depCtx, span := otel.Tracer("are-mcp/dependencies").Start(ctx, dep.name+" ping")
+			err := dep.ping(depCtx)
+			if err != nil {
+				span.SetStatus(codes.Error, "dependency unavailable")
+			}
+			span.End()
+			if err != nil {
+				return errors.New("dependency unavailable")
+			}
+		}
+		return nil
+	}})
+	if err != nil {
+		return err
+	}
+	addr := os.Getenv("HTTP_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8080"
+	}
+	httpServer := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 35 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10, BaseContext: func(net.Listener) context.Context { return ctx }}
+	errs := make(chan error, 1)
+	go func() { errs <- httpServer.ListenAndServe() }()
+	select {
+	case err := <-errs:
+		if !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	case <-ctx.Done():
+		shutdownCtx, c := context.WithTimeout(context.Background(), 15*time.Second)
+		defer c()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			_ = httpServer.Close()
+			return err
+		}
+	}
+	return nil
 }
-
-func printBanner() {
-	fmt.Fprintln(os.Stderr, "Server Status: STARTING")
-	fmt.Fprintln(os.Stderr, "Protocol: MCP (Model Context Protocol)")
-	fmt.Fprintln(os.Stderr, "Transport: stdio")
-	fmt.Fprintln(os.Stderr, "")
-}
-
 func getConfigPath() string {
-	if path := os.Getenv("HACK_AI_CONFIG"); path != "" {
-		return path
+	if p := os.Getenv("HACK_AI_CONFIG"); p != "" {
+		return p
 	}
 	return "config/config.yaml"
 }

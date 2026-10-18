@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - workloads.yaml
+configMapGenerator:
+  - name: prometheus-config
+    files: [prometheus.yml, alerts.yml]
+  - name: grafana-datasources
+    files: [datasources.yml]
+  - name: grafana-providers
+    files: [dashboards.yml]
+  - name: grafana-dashboard
+    files: [overview.json]

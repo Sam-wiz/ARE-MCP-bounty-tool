@@ -38,7 +38,7 @@ func (e *Engine) handleValidateFinding(ctx context.Context, args map[string]inte
 	}
 
 	var results strings.Builder
-	results.WriteString(fmt.Sprintf("🔍 Validating: %s\n", finding.Title))
+	results.WriteString(fmt.Sprintf(" Validating: %s\n", finding.Title))
 	results.WriteString(fmt.Sprintf("Current State: %s | Severity: %s\n\n", finding.State, finding.Severity))
 
 	// Secondary verification: replay the request
@@ -59,7 +59,7 @@ func (e *Engine) handleValidateFinding(ctx context.Context, args map[string]inte
 		if e.config.MongoDB != nil {
 			e.config.MongoDB.SaveFinding(ctx, finding)
 		}
-		results.WriteString("\n✅ Finding state updated to VERIFIED\n")
+		results.WriteString("\n[OK] Finding state updated to VERIFIED\n")
 	}
 
 	return successResult(results.String()), nil
@@ -84,7 +84,7 @@ func (e *Engine) handleCaptureEvidence(ctx context.Context, args map[string]inte
 	}
 
 	var results strings.Builder
-	results.WriteString("📷 Evidence Capture\n\n")
+	results.WriteString(" Evidence Capture\n\n")
 
 	for _, et := range evidenceTypes {
 		evidenceType, _ := et.(string)

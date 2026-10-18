@@ -980,49 +980,5 @@ func (s *Server) registerTools() {
 				},
 			},
 		},
-
-		// === WIRELESS ATTACK CHAIN ===
-		{
-			Name: "wifi_attack",
-			Description: "Orchestrated WPS/WPA2 attack chain against an AP you own. " +
-				"Steps: enable monitor mode → wash WPS scan → reaver Pixie Dust → fallback brute-force (or handshake/PMKID path). " +
-				"Requires a USB Wi-Fi adapter with monitor+injection support (e.g. Alfa AWUS036NHA) plugged into Kali Linux. " +
-				"Does NOT work on macOS built-in Wi-Fi.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"interface": map[string]interface{}{
-						"type":        "string",
-						"description": "Wireless interface name before monitor mode (e.g. wlan0). Must be the USB adapter.",
-					},
-					"ssid": map[string]interface{}{
-						"type":        "string",
-						"description": "Target network name (SSID). Used to auto-detect BSSID from wash scan output.",
-					},
-					"bssid": map[string]interface{}{
-						"type":        "string",
-						"description": "Target AP MAC address (e.g. AA:BB:CC:DD:EE:FF). If omitted, auto-detected via wash scan.",
-					},
-					"channel": map[string]interface{}{
-						"type":        "number",
-						"description": "AP channel (1-13 for 2.4GHz, 36+ for 5GHz). Required when bssid is set manually.",
-					},
-					"attack": map[string]interface{}{
-						"type": "string",
-						"enum": []string{"wps_pixie", "wps_brute", "handshake", "pmkid"},
-						"description": "Attack method: " +
-							"wps_pixie=Pixie Dust then brute-force fallback (default, fastest); " +
-							"wps_brute=bully WPS brute-force; " +
-							"handshake=deauth+capture+aircrack-ng; " +
-							"pmkid=passive PMKID capture+hashcat (no deauth needed).",
-					},
-					"wordlist": map[string]interface{}{
-						"type":        "string",
-						"description": "Path to wordlist for handshake/PMKID cracking (default: /usr/share/wordlists/rockyou.txt).",
-					},
-				},
-				"required": []string{"interface"},
-			},
-		},
 	}
 }

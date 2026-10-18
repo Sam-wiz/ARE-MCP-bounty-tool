@@ -1,0 +1,83 @@
+name: Verify and deploy locally
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.9'
+          cache: true
+      - name: Vet
+        run: go vet ./...
+      - name: Race tests
+        env:
+          WORKSPACE_SKIP_VENV: '1'
+        run: go test -race ./... -coverprofile=coverage.out
+      - name: Compile all commands
+        run: go build ./cmd/...
+      - name: Check reachable Go vulnerabilities
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: coverage.out
+  kubernetes:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.9'
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.35.0
+      - name: Install kind
+        run: go install sigs.k8s.io/kind@v0.31.0
+      - name: Build and deploy exact source to ephemeral Kubernetes
+        run: bash scripts/local_up.sh
+      - name: Verify application journey
+        run: bash scripts/local_demo.sh
+      - name: Verify metrics dashboard and exported traces
+        run: python3 scripts/verify_observability.py
+      - name: Verify outage recovery and persisted finding
+        run: python3 scripts/verify_recovery.py
+      - name: Collect pod diagnostics
+        if: always()
+        env:
+          KUBECONFIG: artifacts/kubeconfig
+        run: |
+          kubectl --context kind-are-mcp -n are-mcp get pods -o wide > artifacts/ci-pods.txt || true
+          kubectl --context kind-are-mcp -n are-mcp get events --sort-by=.lastTimestamp > artifacts/events.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-runtime-evidence
+          path: |
+            artifacts/source-identity.json
+            artifacts/smoke.json
+            artifacts/recovery.json
+            artifacts/observability.json
+            artifacts/rendered.yaml
+            artifacts/pods.txt
+            artifacts/runtime.txt
+            artifacts/pod-identities.json
+            artifacts/ci-pods.txt
+            artifacts/events.txt
+            artifacts/metrics.txt
+            artifacts/application.log
+          retention-days: 7

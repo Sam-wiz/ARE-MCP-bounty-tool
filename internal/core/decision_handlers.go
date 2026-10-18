@@ -33,7 +33,7 @@ func (e *Engine) handleConsultHuman(ctx context.Context, args map[string]interfa
 		e.config.MongoDB.LogConsultation(ctx, consultation)
 	}
 
-	result := fmt.Sprintf(`🔔 HUMAN CONSULTATION REQUIRED
+	result := fmt.Sprintf(` HUMAN CONSULTATION REQUIRED
 
 Category: %s
 Question: %s
@@ -41,7 +41,7 @@ Question: %s
 Context:
 %s
 
-⏳ Waiting for human response...`, category, question, contextStr)
+ Waiting for human response...`, category, question, contextStr)
 
 	return successResult(result), nil
 }

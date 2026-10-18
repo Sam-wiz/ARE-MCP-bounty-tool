@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - app.yaml
+  - mongodb.yaml
+  - redis.yaml
+configMapGenerator:
+  - name: app-config
+    literals:
+      - SERVER_TRANSPORT=http
+      - HTTP_ADDR=0.0.0.0:8080
+      - MONGODB_DATABASE=hack_ai_v2
+      - REDIS_ADDR=redis:6379
+      - WORKSPACE_DIR=/app/bounties
+      - WORKSPACE_SKIP_VENV=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+  - name: mongo-init
+    files:
+      - init.js=mongo-init.js

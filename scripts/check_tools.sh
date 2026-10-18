@@ -50,7 +50,7 @@ log_pass() {
     if $JSON_OUTPUT; then return; fi
     local version_info=""
     if [ -n "${2:-}" ]; then version_info=" ${DIM}(${2})${NC}"; fi
-    echo -e "  ${GREEN}✅ PASS${NC}  ${1}${version_info}"
+    echo -e "  ${GREEN}[OK] PASS${NC}  ${1}${version_info}"
 }
 
 log_fail() {
@@ -58,20 +58,29 @@ log_fail() {
     if $JSON_OUTPUT; then return; fi
     local reason=""
     if [ -n "${2:-}" ]; then reason=" ${DIM}— ${2}${NC}"; fi
-    echo -e "  ${RED}❌ FAIL${NC}  ${1}${reason}"
+    echo -e "  ${RED}[ERROR] FAIL${NC}  ${1}${reason}"
 }
 
 log_skip() {
     SKIP=$((SKIP + 1))
     if $JSON_OUTPUT; then return; fi
-    echo -e "  ${YELLOW}⏭  SKIP${NC}  ${1} ${DIM}— ${2:-skipped}${NC}"
+    echo -e "  ${YELLOW}[SKIP]  SKIP${NC}  ${1} ${DIM}— ${2:-skipped}${NC}"
 }
 
 add_json() {
     local name="$1" category="$2" status="$3" detail="${4:-}"
-    JSON_RESULTS=$(echo "$JSON_RESULTS" | sed 's/]$//')
-    if [ "$TOTAL" -gt 1 ]; then JSON_RESULTS="${JSON_RESULTS},"; fi
-    JSON_RESULTS="${JSON_RESULTS}{\"name\":\"$name\",\"category\":\"$category\",\"status\":\"$status\",\"detail\":\"$detail\"}]"
+    JSON_RESULTS=$(python3 - "$JSON_RESULTS" "$name" "$category" "$status" "$detail" <<'PYJSON'
+import json, sys
+results = json.loads(sys.argv[1])
+results.append(dict(zip(('name', 'category', 'status', 'detail'), sys.argv[2:])))
+print(json.dumps(results))
+PYJSON
+    )
+}
+
+# A banner or error message alone does not demonstrate a working executable.
+verify_output_failed() {
+    printf '%s\n' "$1" | grep -Eiq "command not found|Traceback \(most recent call last\)|No module named|can't open file|error while loading shared libraries|dyld.*(not loaded|not found)"
 }
 
 # Run a verify command with timeout, capture output
@@ -233,14 +242,14 @@ check_tool() {
         # Run the verify command — it checks dirs, venvs, npm, etc.
         local output
         output=$(run_verify "$verify_cmd" 2>&1) || true
-        if [ -n "$output" ]; then
+        if [ -n "$output" ] && ! verify_output_failed "$output"; then
             local version_line
             version_line=$(extract_version "$output")
             log_pass "$category/$name" "${version_line:-found}"
             $JSON_OUTPUT && add_json "$name" "$category" "pass" "${version_line:-found}"
         else
-            log_fail "$category/$name" "not installed"
-            $JSON_OUTPUT && add_json "$name" "$category" "fail" "not installed"
+            log_fail "$category/$name" "verification failed"
+            $JSON_OUTPUT && add_json "$name" "$category" "fail" "verification failed"
         fi
         return
     fi
@@ -259,6 +268,11 @@ check_tool() {
         # For git-cloned tools, verify inside the directory
         local output
         output=$(cd "$TOOLS_DIR/$name" 2>/dev/null && run_verify "$verify_cmd" 2>&1) || true
+        if [ -z "$output" ] || verify_output_failed "$output"; then
+            log_fail "$category/$name" "verification failed in tool directory"
+            $JSON_OUTPUT && add_json "$name" "$category" "fail" "verification failed in tool directory"
+            return
+        fi
         local version_line
         version_line=$(extract_version "$output")
         log_pass "$category/$name" "${version_line:-git clone}"
@@ -277,7 +291,13 @@ check_tool() {
     output=$(run_verify "$verify_cmd" 2>&1)
     local exit_code=$?
 
-    # LENIENT: If the binary exists and produces ANY output, it's working.
+    if verify_output_failed "$output"; then
+        log_fail "$category/$name" "verification command failed"
+        $JSON_OUTPUT && add_json "$name" "$category" "fail" "verification command failed"
+        return
+    fi
+
+    # Some tools return nonzero status for a valid help/version banner.
     # Many security tools return exit 1/2/3 for --version/--help but still work fine.
     if [ -n "$output" ]; then
         local version_line
@@ -358,10 +378,10 @@ print_summary() {
     echo -e "${BOLD}  Health Check Summary${NC}"
     echo -e "${BOLD}${BLUE}══════════════════════════════════════════════════${NC}"
     echo ""
-    echo -e "  ${GREEN}✅ Passing:${NC}  $PASS"
-    echo -e "  ${RED}❌ Failing:${NC}  $FAIL"
-    echo -e "  ${YELLOW}⏭  Skipped:${NC} $SKIP"
-    echo -e "  ${CYAN}📊 Total:${NC}    $TOTAL  ($pct% operational)"
+    echo -e "  ${GREEN}[OK] Passing:${NC}  $PASS"
+    echo -e "  ${RED}[ERROR] Failing:${NC}  $FAIL"
+    echo -e "  ${YELLOW}[SKIP]  Skipped:${NC} $SKIP"
+    echo -e "  ${CYAN} Total:${NC}    $TOTAL  ($pct% operational)"
     echo ""
 
     # Health bar
@@ -439,6 +459,9 @@ main() {
 
     run_all_checks
     print_summary
+    if [ "$FAIL" -gt 0 ]; then return 1; fi
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

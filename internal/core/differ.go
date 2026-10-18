@@ -116,14 +116,14 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 
 	// Build result
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("🔍 Differential Analysis: %s\n\n", method))
+	result.WriteString(fmt.Sprintf(" Differential Analysis: %s\n\n", method))
 	result.WriteString(fmt.Sprintf("URL 1: %s → %d (%d bytes)\n", url1, diff.StatusCode1, resp1.BodySize))
 	result.WriteString(fmt.Sprintf("URL 2: %s → %d (%d bytes)\n\n", url2, diff.StatusCode2, resp2.BodySize))
 
 	if diff.BodyMatch {
-		result.WriteString("⚠️  Bodies are IDENTICAL — may be a generic/template response\n")
+		result.WriteString("[WARNING]  Bodies are IDENTICAL — may be a generic/template response\n")
 	} else {
-		result.WriteString("🔴 Bodies DIFFER — potential data exposure confirmed!\n\n")
+		result.WriteString("[ALERT] Bodies DIFFER — potential data exposure confirmed!\n\n")
 
 		if len(diff.JSONDiffs) > 0 {
 			result.WriteString("--- JSON Differences ---\n")
@@ -156,7 +156,7 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 	}
 
 	if diff.DataLeaked {
-		result.WriteString(fmt.Sprintf("\n🔴 DATA LEAK DETECTED: %v\n", diff.LeakedFields))
+		result.WriteString(fmt.Sprintf("\n[ALERT] DATA LEAK DETECTED: %v\n", diff.LeakedFields))
 		result.WriteString(fmt.Sprintf("Severity: %s\n", diff.Severity))
 	}
 
@@ -167,7 +167,7 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 		}
 	}
 
-	result.WriteString(fmt.Sprintf("\n📋 Summary: %s\n", diff.Summary))
+	result.WriteString(fmt.Sprintf("\n Summary: %s\n", diff.Summary))
 
 	// Auto-ingest as finding if data leaked
 	if diff.DataLeaked {
@@ -193,7 +193,7 @@ func (e *Engine) CompareResponses(ctx context.Context, args map[string]interface
 		if e.config.MongoDB != nil {
 			e.config.MongoDB.SaveFinding(ctx, finding)
 		}
-		result.WriteString(fmt.Sprintf("\n📦 Auto-ingested as finding %s\n", finding.ID))
+		result.WriteString(fmt.Sprintf("\n Auto-ingested as finding %s\n", finding.ID))
 	}
 
 	return successResult(result.String()), nil

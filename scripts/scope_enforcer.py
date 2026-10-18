@@ -93,7 +93,7 @@ class ScopeEnforcer:
         """Kill the flow with a 403 and log it."""
         self.blocked_count += 1
         ctx.log.warn(
-            f"[SCOPE] ⛔ BLOCKED #{self.blocked_count}: {flow.request.method} "
+            f"[SCOPE] [BLOCKED] BLOCKED #{self.blocked_count}: {flow.request.method} "
             f"{flow.request.pretty_url} — {reason}"
         )
         flow.response = http.Response.make(

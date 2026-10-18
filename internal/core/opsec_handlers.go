@@ -14,7 +14,7 @@ import (
 
 func (e *Engine) handleOpsecSetup(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	var results strings.Builder
-	results.WriteString("🛡️ OPSEC Setup\n\n")
+	results.WriteString(" OPSEC Setup\n\n")
 
 	// Egress proxy — the knob that unblocks geo-restricted targets. Accepts
 	// http://, https://, socks5://[user:pass@]host:port. Once set, ALL request
@@ -38,7 +38,7 @@ func (e *Engine) handleOpsecSetup(ctx context.Context, args map[string]interface
 			"ifconfig en0 | grep ether",
 			"mac-check", 5)
 		results.WriteString(fmt.Sprintf("Current MAC: %s\n", result.Content[0].Text))
-		results.WriteString("⚠️  To spoof: sudo ifconfig en0 ether XX:XX:XX:XX:XX:XX\n\n")
+		results.WriteString("[WARNING]  To spoof: sudo ifconfig en0 ether XX:XX:XX:XX:XX:XX\n\n")
 	}
 
 	// Tor check
@@ -66,7 +66,7 @@ func (e *Engine) handleOpsecSetup(ctx context.Context, args map[string]interface
 
 func (e *Engine) handleOpsecVerify(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
 	var results strings.Builder
-	results.WriteString("🛡️ OPSEC Verification\n\n")
+	results.WriteString(" OPSEC Verification\n\n")
 
 	// IP check — through the egress proxy the request tools actually use.
 	results.WriteString("=== Egress IP Address ===\n")

@@ -1,5 +1,22 @@
 # hack-ai-v2 (ARE-MCP-bounty tool)
 
+## Local Kubernetes project
+
+The local DevOps runtime adds an authenticated workflow gateway, Docker build,
+Kubernetes deployment, Prometheus/Grafana metrics, OpenTelemetry/Jaeger traces,
+CI workflows and recovery checks. Start with [the operations guide](docs/OPERATIONS.md).
+
+```sh
+make local-up
+make local-demo
+make dashboards
+```
+
+See [baseline and authorship](docs/BASELINE.md), [architecture](docs/ARCHITECTURE.md),
+[viva rehearsal](docs/VIVA.md), and [requirements and outstanding submission steps](docs/REQUIREMENTS.md).
+The original application and stdio MCP instructions follow below.
+
+
 An automated bug-bounty engine. It exposes a large set of security tools over the
 Model Context Protocol (MCP), and an LLM agent (Claude Code) drives them to do
 recon, probe for vulnerabilities, and write up findings. All state lives in MongoDB.
@@ -149,7 +166,7 @@ decisions       every tool call + captured model reasoning
 reviews         each panel round: per-model verdicts + aggregate + demands
 triage_outcomes real program verdicts + reward   → the scoreboard
 lessons         auto-generated from rejections   → reviewer grounding
-triage_threads  full researcher↔triager threads + embeddings (RAG)
+triage_threads  full researcher<->triager threads + embeddings (RAG)
 transcripts     archived agent sessions (RLHF corpus)
 programs · sessions · tool_runs · vector_statuses · script_executions · hypotheses
 ```
