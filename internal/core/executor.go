@@ -154,18 +154,28 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 		return errorResult(fmt.Sprintf("[ERROR] Failed to build command: %v", err)), nil
 	}
 
+	// Capture ownership before the external process starts.
+	program := e.GetProgram()
+
 	// 3. Execute the command
 	startedAt := time.Now()
 	stdout, stderr, exitCode, execErr := executeCommand(ctx, cmdStr, plugin.Execute.Timeout)
 	duration := time.Since(startedAt)
 
 	// 4. Parse the output
-	parseResult, parseErr := ParseToolOutput(plugin, stdout, e.getSessionID())
+	var parseResult *ParseResult
+	var parseErr error
+	if execErr == nil {
+		parseResult, parseErr = ParseToolOutput(plugin, stdout, e.getSessionID())
+	}
 
 	// 5. Store findings in memory and MongoDB
 	var findingIDs []string
+	persisted := 0
+	persistenceFailed := false
 	if parseResult != nil {
 		for _, finding := range parseResult.Findings {
+			finding.Program = program
 			e.mu.Lock()
 			e.findings[finding.ID] = finding
 			e.mu.Unlock()
@@ -174,6 +184,9 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 			if e.config.MongoDB != nil {
 				if saveErr := e.config.MongoDB.SaveFinding(ctx, finding); saveErr != nil {
 					log.Printf("[EXECUTOR] Failed to save finding %s: %v", finding.ID, saveErr)
+					persistenceFailed = true
+				} else {
+					persisted++
 				}
 			}
 		}
@@ -202,7 +215,11 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 
 	// 7. Build summary for the LLM
 	var summary strings.Builder
-	summary.WriteString(fmt.Sprintf("[OK] Executed: %s\n", plugin.Name))
+	if execErr != nil {
+		summary.WriteString(fmt.Sprintf("[ERROR] Tool execution failed: %s\n", plugin.Name))
+	} else {
+		summary.WriteString(fmt.Sprintf("[OK] Executed: %s\n", plugin.Name))
+	}
 	summary.WriteString(fmt.Sprintf(" Command: %s\n", cmdStr))
 	summary.WriteString(fmt.Sprintf("  Duration: %v | Exit: %d\n", duration.Round(time.Millisecond), exitCode))
 
@@ -215,7 +232,11 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 
 	if parseResult != nil && len(parseResult.Findings) > 0 {
 		summary.WriteString(fmt.Sprintf(" Findings: %d items parsed (%s format)\n", parseResult.ItemCount, parseResult.ParseType))
-		summary.WriteString(" Saved to MongoDB: [OK]\n\n")
+		if e.config.MongoDB == nil {
+			summary.WriteString(" MongoDB not configured; results kept in memory.\n\n")
+		} else {
+			summary.WriteString(fmt.Sprintf(" Saved to MongoDB: %d/%d findings\n\n", persisted, len(parseResult.Findings)))
+		}
 
 		limit := 10
 		if len(parseResult.Findings) < limit {
@@ -252,7 +273,9 @@ func (e *Engine) ExecutePluginFull(ctx context.Context, plugin *types.PluginDefi
 		summary.WriteString(fmt.Sprintf("\n[WARNING]  Parse warning: %v\n", parseErr))
 	}
 
-	return successResult(summary.String()), nil
+	result := successResult(summary.String())
+	result.IsError = execErr != nil || persistenceFailed
+	return result, nil
 }
 
 // ExecuteRawCommand runs an arbitrary command and logs it to MongoDB
@@ -529,7 +552,7 @@ func (e *Engine) ExecuteHuntingScript(
 
 	// ── Step 10: Build LLM response ─────────────────────────────────────
 	fullOutput := outputBuf.String()
-	
+
 	// FIX: Use smartTruncate instead of tailString to keep headers/status
 	snippet := smartTruncate(fullOutput, 2000)
 

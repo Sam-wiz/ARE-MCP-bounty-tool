@@ -1,7 +1,11 @@
 package core
 
 import (
+	"context"
+	"strings"
 	"testing"
+
+	"github.com/samrudh/hack-ai-v2/internal/config"
 
 	"github.com/samrudh/hack-ai-v2/internal/types"
 )
@@ -13,7 +17,7 @@ func TestBuildCommand_SubfinderArgs(t *testing.T) {
 		Execute: types.ExecuteConfig{
 			Command: "subfinder -d {domain} -silent {extra_args}",
 			Input: map[string]types.InputParam{
-				"domain": {Type: "string", Required: true},
+				"domain":     {Type: "string", Required: true},
 				"extra_args": {Type: "string", Required: false, Default: ""},
 			},
 		},
@@ -143,5 +147,43 @@ func TestShellEscape(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("ShellEscape(%q) = %q, want %q", tt.input, result, tt.expected)
 		}
+	}
+}
+
+func TestPluginFindingsBelongToActiveProgram(t *testing.T) {
+	cfg := config.LoadOrDefault("")
+	cfg.Workspace.BaseDir = t.TempDir()
+	e := NewEngine(EngineConfig{Config: cfg})
+	e.program = "scanner-demo"
+	plugin := &types.PluginDefinition{Name: "local-fixture", Execute: types.ExecuteConfig{Command: `printf '%s\n' '{"name":"local result","url":"http://127.0.0.1/found"}'`, Timeout: 5}, Parse: types.ParseConfig{Type: "json"}}
+	result, err := e.ExecutePluginFull(context.Background(), plugin, nil)
+	if err != nil || result.IsError {
+		t.Fatalf("execution failed: %v %v", result, err)
+	}
+	findings, err := e.findingsForProgram(context.Background(), nil)
+	if err != nil || len(findings) != 1 || findings[0].Program != "scanner-demo" {
+		t.Fatalf("scanner finding missing from active program: %v %v", findings, err)
+	}
+	if !strings.Contains(result.Content[0].Text, "MongoDB not configured") {
+		t.Fatal("incorrect database persistence claim")
+	}
+	e.program = "another-program"
+	findings, err = e.findingsForProgram(context.Background(), nil)
+	if err != nil || len(findings) != 0 {
+		t.Fatal("scanner finding leaked across programs")
+	}
+}
+
+func TestPluginExecutionFailureIsReported(t *testing.T) {
+	cfg := config.LoadOrDefault("")
+	cfg.Workspace.BaseDir = t.TempDir()
+	e := NewEngine(EngineConfig{Config: cfg})
+	plugin := &types.PluginDefinition{Name: "failing-fixture", Execute: types.ExecuteConfig{Command: "exit 7", Timeout: 5}}
+	result, err := e.ExecutePluginFull(context.Background(), plugin, nil)
+	if err != nil || !result.IsError || !strings.Contains(result.Content[0].Text, "Exit: 7") {
+		t.Fatalf("failed process reported as successful: %v %v", result, err)
+	}
+	if len(e.findings) != 0 {
+		t.Fatal("failed process created a bogus raw finding")
 	}
 }
