@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/samrudh/hack-ai-v2/internal/config"
 )
 
 // Provider is one addressable model behind an OpenAI-compatible endpoint.
@@ -229,6 +231,11 @@ func defaultHTTPClient() *http.Client {
 //
 // Missing keys are simply skipped, so the panel scales with what's configured.
 func PanelFromEnv() []Provider {
+	// Re-read .env on every call (BUG-3): credentials added mid-session become
+	// visible without an MCP server restart. LoadDotEnv never overrides keys
+	// already present in the environment, so exported vars still win.
+	config.LoadDotEnv()
+
 	var panel []Provider
 	httpClient := defaultHTTPClient()
 
@@ -328,6 +335,7 @@ func parseHeaders(s string) map[string]string {
 // Falls back to the first panelist if DIRECTOR_* is unset. ok is false when no
 // provider at all is configured.
 func DirectorFromEnv() (Provider, bool) {
+	config.LoadDotEnv() // pick up director credentials added mid-session (BUG-3)
 	provider := strings.ToLower(envOr("DIRECTOR_PROVIDER", "openai"))
 	model := os.Getenv("DIRECTOR_MODEL")
 	httpClient := defaultHTTPClient()

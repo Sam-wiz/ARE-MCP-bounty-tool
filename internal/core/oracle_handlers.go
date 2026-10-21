@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samrudh/hack-ai-v2/internal/config"
 	"github.com/samrudh/hack-ai-v2/internal/oracle"
 	"github.com/samrudh/hack-ai-v2/internal/types"
 )
@@ -25,6 +26,10 @@ import (
 // ============================================================================
 
 func (e *Engine) handleVerifyFinding(ctx context.Context, args map[string]interface{}) (types.ToolResult, error) {
+	// Resolve ORACLE_ID_* identities lazily from .env so credentials added
+	// mid-session work without an MCP server restart (BUG-3).
+	config.LoadDotEnv()
+
 	// Resolve the replay spec: inline (replay_spec arg) or hydrated from a finding.
 	var finding *types.Finding
 	findingID := argStr(args, "finding_id")
