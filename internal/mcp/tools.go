@@ -839,6 +839,7 @@ func (s *Server) registerTools() {
 			Name: "log_vector_status",
 			Description: "Log the exhaustion status of an attack vector for deterministic termination. " +
 				"Use this to track which vectors have been fully tested vs. which are still open. " +
+				"PENDING = identified, not yet tested (log early, resolve to a final state later). " +
 				"EXHAUSTED = all test cases tried, no vuln found. " +
 				"VULNERABLE = confirmed vulnerability on this vector. " +
 				"BLOCKED_BY_DESIGN = cannot test (WAF, auth wall, scope restriction, etc).",
@@ -851,8 +852,8 @@ func (s *Server) registerTools() {
 					},
 					"state": map[string]interface{}{
 						"type":        "string",
-						"enum":        []string{"EXHAUSTED", "VULNERABLE", "BLOCKED_BY_DESIGN"},
-						"description": "Final state of this attack vector",
+						"enum":        []string{"PENDING", "EXHAUSTED", "VULNERABLE", "BLOCKED_BY_DESIGN"},
+						"description": "State of this attack vector (PENDING is in-flight; resolve to a final state when done)",
 					},
 					"rationale": map[string]interface{}{
 						"type":        "string",

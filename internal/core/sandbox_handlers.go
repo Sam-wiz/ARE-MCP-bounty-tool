@@ -78,9 +78,11 @@ func (e *Engine) handleLogVectorStatus(ctx context.Context, args map[string]inte
 	}
 
 	state, _ := args["state"].(string)
-	validStates := map[string]bool{"EXHAUSTED": true, "VULNERABLE": true, "BLOCKED_BY_DESIGN": true}
+	// PENDING is a first-class state: the hunting workflow logs vectors the
+	// moment they are identified and resolves them on completion (BUG-1).
+	validStates := map[string]bool{"PENDING": true, "EXHAUSTED": true, "VULNERABLE": true, "BLOCKED_BY_DESIGN": true}
 	if !validStates[state] {
-		return errorResult("❌ 'state' must be EXHAUSTED, VULNERABLE, or BLOCKED_BY_DESIGN"), nil
+		return errorResult("❌ 'state' must be PENDING, EXHAUSTED, VULNERABLE, or BLOCKED_BY_DESIGN"), nil
 	}
 
 	rationale, _ := args["rationale"].(string)
@@ -112,6 +114,8 @@ func (e *Engine) handleLogVectorStatus(ctx context.Context, args map[string]inte
 	var result strings.Builder
 	emoji := "📊"
 	switch state {
+	case "PENDING":
+		emoji = "🕓"
 	case "EXHAUSTED":
 		emoji = "✅"
 	case "VULNERABLE":
