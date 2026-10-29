@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/samrudh/hack-ai-v2/internal/storage"
@@ -92,6 +93,19 @@ func executeCommand(ctx context.Context, cmdStr string, timeoutSec int) (stdout 
 	defer cancel()
 
 	cmd := exec.CommandContext(execCtx, "/bin/sh", "-c", cmdStr)
+	// Run the shell in its own process group and, on timeout/cancel, kill the
+	// whole group — not just /bin/sh. Plain CommandContext kills only the
+	// shell, so children (jadx, apktool, ...) outlived the MCP request and a
+	// stuck child wedged every subsequent call (BUG-2). WaitDelay bounds how
+	// long Wait can hang on pipes still held by a survivor.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		if cmd.Process == nil {
+			return os.ErrProcessDone
+		}
+		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+	cmd.WaitDelay = 10 * time.Second
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf

@@ -180,6 +180,10 @@ func (s *Server) registerTools() {
 						"type":        "string",
 						"description": "Custom Frida script to run",
 					},
+					"work_dir": map[string]interface{}{
+						"type":        "string",
+						"description": "Output dir for apktool/jadx artifacts (default: unique /tmp/hackai-mobile-* per run)",
+					},
 				},
 			},
 		},
