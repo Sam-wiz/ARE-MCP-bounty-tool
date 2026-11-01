@@ -257,3 +257,15 @@ network, cloud, mobile, secrets, OPSEC), installed and audited via:
 ./scripts/install_tools.sh --essentials
 ./scripts/check_tools.sh               # audit what's actually working
 ```
+
+export KUBECONFIG="$PWD/artifacts/kubeconfig"
+export PATH="$PWD/.tools:$PATH"
+docker info
+make local-up
+kubectl --context kind-are-mcp -n are-mcp get pods
+python3 -m json.tool artifacts/smoke.json
+make verify-observability
+
+make verify-recovery
+python3 -m json.tool artifacts/recovery.json
+make dashboards
